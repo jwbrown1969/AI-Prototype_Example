@@ -2,7 +2,7 @@
 
 Companion demonstration for the Human Factors Brief article "A Sketch of Everything."
 
-Open `index.html` for the guided page. Each prototype in `prototypes/` was generated on October 5, 2026 by a general-purpose AI model in a fresh session that had seen none of the others. The prototypes are unedited. Exact prompts are in `prompts.md`.
+Open `index.html` for the guided page. Each prototype in `prototypes/` was generated on October 5, 2026 by a general-purpose AI model, each in its own session. Runs A, C, and D1–D3 were fresh generations; B and B2 were each given A's file to re-render and saw nothing else. The prototypes are unedited. Exact prompts are in `prompts.md`.
 
 ## Results
 
