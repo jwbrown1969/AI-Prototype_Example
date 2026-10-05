@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pothole Report</title>
+<style>
+  :root{
+    --bg:#e9ecef;--surface:#ffffff;--surface-2:#f4f6f8;--ink:#14212b;--ink-2:#4a5a67;--ink-3:#8796a3;
+    --line:#dde3e8;--brand:#0f5c63;--brand-2:#13808a;--brand-soft:#e3f2f2;--accent:#f2a516;--accent-soft:#fff4dc;
+    --ok:#1f9d63;--ok-soft:#e2f5ec;--road:#ffffff;--block:#e7ece4;--park:#cfe6c8;--water:#cfe3f0;
+    --shadow:0 20px 50px rgba(20,33,43,.18),0 4px 12px rgba(20,33,43,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c1216;--surface:#151e24;--surface-2:#1c272e;--ink:#eef3f6;--ink-2:#a9b8c3;--ink-3:#6f8190;
+      --line:#2a3740;--brand:#3fb5bd;--brand-2:#5fcad1;--brand-soft:#16343a;--accent:#f5b53a;--accent-soft:#3a2f17;
+      --ok:#3cc488;--ok-soft:#173528;--road:#33434d;--block:#1f2a31;--park:#21382a;--water:#1b3346;
+      --shadow:0 20px 50px rgba(0,0,0,.5),0 4px 12px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1216;--surface:#151e24;--surface-2:#1c272e;--ink:#eef3f6;--ink-2:#a9b8c3;--ink-3:#6f8190;
+    --line:#2a3740;--brand:#3fb5bd;--brand-2:#5fcad1;--brand-soft:#16343a;--accent:#f5b53a;--accent-soft:#3a2f17;
+    --ok:#3cc488;--ok-soft:#173528;--road:#33434d;--block:#1f2a31;--park:#21382a;--water:#1b3346;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);display:flex;justify-content:center;padding:24px 16px;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .phone{width:100%;max-width:390px;min-height:760px;background:var(--surface);border-radius:44px;padding:12px 0 0;position:relative;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--line)}
+  .status{display:flex;justify-content:space-between;align-items:center;padding:6px 28px 10px;font-size:14px;font-weight:600;color:var(--ink)}
+  .status .island{width:110px;height:30px;background:#000;border-radius:20px}
+  .status .sys{display:flex;gap:5px;align-items:center}
+  .status svg{width:17px;height:12px;fill:var(--ink)}
+  .screen{display:none;flex-direction:column;gap:16px;flex:1;padding:4px 20px 24px}
+  .screen.active{display:flex;animation:in .28s ease}
+  @keyframes in{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+
+  .bar{display:flex;align-items:center;gap:12px;padding:6px 0 4px}
+  .bar h1{font-size:24px;line-height:1.15;margin:0;flex:1;font-weight:750;letter-spacing:-.02em}
+  .step{font-size:12px;font-weight:650;color:var(--brand);background:var(--brand-soft);padding:5px 10px;border-radius:999px;white-space:nowrap}
+  .progress{height:4px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:-6px}
+  .progress i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-2));border-radius:4px;transition:width .3s}
+  .back{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink);flex:none}
+  .back svg{width:18px;height:18px}
+  p.hint{margin:0;font-size:15px;color:var(--ink-2);line-height:1.45}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px}
+
+  .map{position:relative;height:290px;border-radius:20px;overflow:hidden;cursor:crosshair;border:1px solid var(--line);background:var(--block)}
+  .map svg.tiles{position:absolute;inset:0;width:100%;height:100%}
+  .map .lbl{position:absolute;top:10px;left:10px;font-size:11px;font-weight:600;color:var(--ink-2);background:color-mix(in srgb,var(--surface) 88%,transparent);padding:4px 8px;border-radius:8px;letter-spacing:.02em;backdrop-filter:blur(4px)}
+  .map .ctrl{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  .map .ctrl span{width:32px;height:32px;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:18px;font-weight:500}
+  .map .ctrl span+span{border-top:1px solid var(--line)}
+  .pin{position:absolute;width:40px;height:52px;margin:-50px 0 0 -20px;display:none;pointer-events:none;filter:drop-shadow(0 4px 4px rgba(0,0,0,.25))}
+  .pin.on{display:block;animation:drop .35s cubic-bezier(.3,1.6,.6,1)}
+  @keyframes drop{from{transform:translateY(-24px);opacity:0}to{transform:none;opacity:1}}
+  .pin-shadow{position:absolute;width:16px;height:6px;margin:-3px 0 0 -8px;border-radius:50%;background:rgba(0,0,0,.25);display:none}
+  .pin-shadow.on{display:block}
+
+  .linkbtn{background:none;border:none;font:inherit;color:var(--brand);cursor:pointer;padding:4px 0;font-size:15px;font-weight:600;align-self:flex-start;display:flex;align-items:center;gap:8px}
+  .linkbtn svg{width:18px;height:18px}
+
+  .addr{padding:14px;display:flex;gap:12px;align-items:center}
+  .addr .ico{width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--ink-3);flex:none;transition:all .2s}
+  .addr.set .ico{background:var(--accent-soft);color:var(--accent)}
+  .addr .ico svg{width:20px;height:20px}
+  .addr .txt{flex:1;min-width:0}
+  .addr strong{display:block;font-size:15px;font-weight:650}
+  .addr:not(.set) strong{color:var(--ink-3);font-weight:550}
+  .addr .line{height:8px;background:var(--line);border-radius:4px;margin-top:7px}
+
+  .btn{font:inherit;font-size:17px;font-weight:650;padding:16px;background:var(--brand);color:#fff;border:none;border-radius:16px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 16px color-mix(in srgb,var(--brand) 35%,transparent);transition:transform .1s,background .2s}
+  .btn:active{transform:scale(.98)}
+  .btn svg{width:18px;height:18px}
+  .btn[disabled]{background:var(--surface-2);color:var(--ink-3);cursor:not-allowed;box-shadow:none;border:1px solid var(--line)}
+  .btn.ghost{background:var(--surface);color:var(--brand);border:1.5px solid var(--brand);box-shadow:none}
+  .spacer{flex:1}
+
+  .field{display:flex;flex-direction:column;gap:8px}
+  label{font-size:14px;font-weight:650;color:var(--ink)}
+  .opt{color:var(--ink-3);font-size:13px;font-weight:500}
+  .photo{height:170px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;border:2px dashed var(--line);border-radius:18px;cursor:pointer;position:relative;background:var(--surface-2);color:var(--ink-2);font-size:14px;overflow:hidden;transition:border-color .2s}
+  .photo:hover{border-color:var(--brand-2)}
+  .photo .plus{width:52px;height:52px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;margin:0 auto 6px}
+  .photo .plus svg{width:26px;height:26px}
+  .photo .shot{position:absolute;inset:0;display:none}
+  .photo.has{border-style:solid;border-color:transparent}
+  .photo.has .shot{display:block}
+  .photo.has .ph-empty{display:none}
+  .photo .ph-full{display:none;position:absolute;left:10px;bottom:10px;background:rgba(10,18,24,.72);color:#fff;padding:6px 10px;border-radius:10px;font-size:13px;font-weight:550;align-items:center;gap:6px;backdrop-filter:blur(4px)}
+  .photo .ph-full svg{width:14px;height:14px}
+  .photo.has .ph-full{display:flex}
+  .center{text-align:center}
+  textarea{font:inherit;font-size:15px;width:100%;height:84px;padding:12px 14px;resize:none;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+  textarea::placeholder{color:var(--ink-3)}
+  textarea:focus{border-color:var(--brand-2);box-shadow:0 0 0 3px var(--brand-soft)}
+
+  .summary{padding:4px 14px;font-size:14px;display:grid;background:var(--surface-2);border:1px solid var(--line);border-radius:16px}
+  .summary .row{display:flex;align-items:center;gap:10px;padding:10px 0;color:var(--ink-2)}
+  .summary .row+.row{border-top:1px solid var(--line)}
+  .summary .row svg{width:18px;height:18px;color:var(--brand);flex:none}
+  .summary strong{color:var(--ink);font-weight:650;margin-left:auto;text-align:right}
+
+  .hero{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:28px}
+  .check{width:96px;height:96px;border-radius:50%;background:var(--ok-soft);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:8px}
+  .check::before{content:"";position:absolute;inset:-12px;border-radius:50%;border:2px solid var(--ok-soft)}
+  .check span{width:64px;height:64px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 8px 20px color-mix(in srgb,var(--ok) 40%,transparent)}
+  .check svg{width:32px;height:32px}
+  .screen.active .check span{animation:pop .45s cubic-bezier(.3,1.6,.6,1)}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+  h2{margin:0;font-size:26px;font-weight:750;letter-spacing:-.02em}
+  .ref{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:20px;font-weight:700;letter-spacing:2px;padding:10px 18px;align-self:center;background:var(--accent-soft);color:var(--ink);border:1px dashed var(--accent);border-radius:12px}
+  .note{font-size:11px;color:var(--ink-3);text-align:center;margin-top:4px;letter-spacing:.02em}
+  .homebar{width:134px;height:5px;border-radius:3px;background:var(--ink);opacity:.85;margin:0 auto 8px}
+  @media (max-width:420px){body{padding:0}.phone{border-radius:0;max-width:none;min-height:100vh;border:none;box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status" aria-hidden="true">
+    <span>9:41</span><span class="island"></span>
+    <span class="sys">
+      <svg viewBox="0 0 17 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="4.5" y="5.5" width="3" height="6.5" rx="1"/><rect x="9" y="3" width="3" height="9" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg viewBox="0 0 25 12" style="width:25px"><rect x=".5" y=".5" width="21" height="11" rx="3" fill="none" stroke="currentColor" style="stroke:var(--ink);opacity:.4"/><rect x="2" y="2" width="16" height="8" rx="1.5"/><rect x="22.5" y="4" width="1.8" height="4" rx=".9" style="opacity:.4"/></svg>
+    </span>
+  </div>
+
+  <section class="screen active" data-screen="location">
+    <div class="bar"><h1>Report a pothole</h1><span class="step">1 of 2</span></div>
+    <div class="progress"><i style="width:50%"></i></div>
+    <p class="hint">Tap the map where the pothole is.</p>
+    <div class="map" id="map" role="button" aria-label="Map, tap to place pin">
+      <svg class="tiles" viewBox="0 0 350 290" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <rect width="350" height="290" style="fill:var(--block)"/>
+        <rect x="196" y="18" width="120" height="70" rx="8" style="fill:var(--park)"/>
+        <path d="M0 238 C 80 220, 140 262, 220 246 S 330 226, 350 236 L350 290 L0 290Z" style="fill:var(--water)"/>
+        <g style="stroke:var(--road)" stroke-linecap="round" fill="none">
+          <path d="M-10 108 H360" stroke-width="16"/>
+          <path d="M-10 196 H360" stroke-width="10"/>
+          <path d="M60 -10 V250" stroke-width="10"/>
+          <path d="M172 -10 V250" stroke-width="18"/>
+          <path d="M282 -10 V230" stroke-width="10"/>
+          <path d="M-10 40 L120 160 L230 290" stroke-width="8"/>
+          <path d="M120 150 H230" stroke-width="5"/>
+          <path d="M20 150 H100" stroke-width="5"/>
+          <path d="M230 150 H340" stroke-width="5"/>
+        </g>
+        <path d="M172 -10 V250" style="stroke:var(--accent)" stroke-width="2" stroke-dasharray="6 8" opacity=".55"/>
+        <g style="fill:var(--ink-3)" font-size="8" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-weight="600" letter-spacing=".5">
+          <text x="10" y="104">MAIN ST</text>
+          <text x="178" y="60" transform="rotate(90 178 60)">OAK AVE</text>
+          <text x="232" y="56" style="fill:var(--ink-2)" opacity=".7">PARK</text>
+          <text x="240" y="192">RIVER RD</text>
+        </g>
+      </svg>
+      <span class="lbl">[ map placeholder ]</span>
+      <div class="ctrl" aria-hidden="true"><span>+</span><span>&minus;</span></div>
+      <div class="pin-shadow" id="pinShadow"></div>
+      <svg class="pin" id="pin" viewBox="0 0 40 52" aria-hidden="true">
+        <path d="M20 1C9.5 1 1 9.3 1 19.6 1 33 20 51 20 51s19-18 19-31.4C39 9.3 30.5 1 20 1z" style="fill:var(--accent)" stroke="#fff" stroke-width="2"/>
+        <circle cx="20" cy="19.5" r="7.5" fill="#fff"/>
+        <circle cx="20" cy="19.5" r="3.5" style="fill:var(--accent)"/>
+      </svg>
+    </div>
+    <button class="linkbtn" id="useLoc">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      Use my current location
+    </button>
+    <div class="addr card" id="addrCard">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+      <div class="txt">
+        <strong id="addrText">No location yet</strong>
+        <div class="line" style="width:70%"></div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="toDetails" disabled>Next <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+  </section>
+
+  <section class="screen" data-screen="photo-submit">
+    <div class="bar"><button class="back" data-go="location" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h1>Add a photo</h1><span class="step">2 of 2</span></div>
+    <div class="progress"><i style="width:100%"></i></div>
+    <div class="field">
+      <label>Photo <span class="opt">(optional)</span></label>
+      <div class="photo" id="photo" role="button" aria-label="Add photo">
+        <svg class="shot" viewBox="0 0 350 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs>
+            <linearGradient id="asph" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d6a72"/><stop offset="1" stop-color="#2f383e"/></linearGradient>
+            <radialGradient id="hole" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#14191c"/><stop offset=".7" stop-color="#252c31"/><stop offset="1" stop-color="#3d474e"/></radialGradient>
+          </defs>
+          <rect width="350" height="170" fill="url(#asph)"/>
+          <path d="M175 0 L170 170" stroke="#e9c34a" stroke-width="5" stroke-dasharray="26 18" opacity=".85"/>
+          <ellipse cx="236" cy="104" rx="70" ry="30" fill="url(#hole)"/>
+          <path d="M170 100 l-14 -8 M300 98 l16 -6 M232 75 l4 -14 M250 133 l8 12" stroke="#1b2125" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="236" cy="110" rx="42" ry="12" fill="#3c5664" opacity=".55"/>
+        </svg>
+        <div class="ph-empty center"><div class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg></div>Tap to take or choose a photo</div>
+        <span class="ph-full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>photo added &middot; tap to remove</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="note">Note <span class="opt">(optional)</span></label>
+      <textarea id="note" placeholder="Lorem ipsum, e.g. near the crosswalk"></textarea>
+    </div>
+    <div class="summary">
+      <span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Location:</span> <strong id="sumAddr">-</strong></span>
+      <span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>Photo:</span> <strong id="sumPhoto">none</strong></span>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="submit">Submit report <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+  </section>
+
+  <section class="screen" data-screen="confirmation">
+    <div class="hero">
+      <div class="check"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span></div>
+      <h2 class="center">Report sent</h2>
+      <p class="hint center">Thanks. The city has received your pothole report.</p>
+    </div>
+    <div class="ref">#PH-<span id="refNo">0000</span></div>
+    <div class="summary">
+      <span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Location:</span> <strong id="cAddr">-</strong></span>
+      <span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>Photo:</span> <strong id="cPhoto">none</strong></span>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="again">Report another pothole</button>
+    <div class="note">Wireframe &middot; placeholder content</div>
+  </section>
+
+  <div class="homebar" aria-hidden="true"></div>
+</div>
+
+<script>
+(function(){
+  var state={addr:null,photo:false};
+  var streets=["100 Main St","22 Oak Ave","5th St & Elm","48 River Rd","Park Blvd near Pine"];
+  function $(id){return document.getElementById(id)}
+  function go(name){
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active',s.dataset.screen===name)});
+    if(name==='photo-submit'){$('sumAddr').textContent=state.addr;$('sumPhoto').textContent=state.photo?'1 attached':'none';}
+  }
+  function place(x,y){
+    var pin=$('pin'),sh=$('pinShadow');
+    pin.classList.remove('on');void pin.getBoundingClientRect();
+    pin.style.left=x+'px';pin.style.top=y+'px';pin.classList.add('on');
+    sh.style.left=x+'px';sh.style.top=y+'px';sh.classList.add('on');
+    state.addr=streets[Math.floor(Math.random()*streets.length)];
+    $('addrText').textContent=state.addr;$('addrCard').classList.add('set');$('toDetails').disabled=false;
+  }
+  $('map').addEventListener('click',function(e){var r=this.getBoundingClientRect();place(e.clientX-r.left,e.clientY-r.top)});
+  $('useLoc').addEventListener('click',function(){var m=$('map');place(m.clientWidth/2,m.clientHeight/2)});
+  $('toDetails').addEventListener('click',function(){go('photo-submit')});
+  document.querySelectorAll('[data-go]').forEach(function(b){b.addEventListener('click',function(){go(b.dataset.go)})});
+  $('photo').addEventListener('click',function(){state.photo=!state.photo;this.classList.toggle('has',state.photo);$('sumPhoto').textContent=state.photo?'1 attached':'none'});
+  $('submit').addEventListener('click',function(){
+    $('refNo').textContent=String(Math.floor(1000+Math.random()*9000));
+    $('cAddr').textContent=state.addr;$('cPhoto').textContent=state.photo?'1 attached':'none';
+    go('confirmation');
+  });
+  $('again').addEventListener('click',function(){
+    state={addr:null,photo:false};$('pin').classList.remove('on');$('pinShadow').classList.remove('on');
+    $('addrText').textContent='No location yet';$('addrCard').classList.remove('set');
+    $('toDetails').disabled=true;$('photo').classList.remove('has');$('note').value='';go('location');
+  });
+})();
+</script>
+</body>
+</html>

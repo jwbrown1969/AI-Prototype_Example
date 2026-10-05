@@ -31,3 +31,7 @@ The C prompt, with one line added before the render instruction:
 - D1: Design approach: map-first. The resident starts by placing the pothole on a map.
 - D2: Design approach: camera-first. The resident starts by taking a photo, and location comes from the photo or the device.
 - D3: Design approach: address-first. The resident starts by typing or confirming a street address or nearest intersection.
+
+## E: scoped sketch re-rendered as polished
+
+Re-render the prototype in /home/claude/ai-prototype_example/prototypes/C_scoped_sketch.html as a polished, finished-looking mobile interface with real visual design: color, typography, and icons. Keep every screen, label, question, option, and line of copy exactly as it appears in the original.
