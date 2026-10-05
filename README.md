@@ -6,15 +6,15 @@ Open `index.html` for the guided page. Each prototype in `prototypes/` was gener
 
 ## Results
 
-| Run | Prompt asked for | Screens | Original copy kept |
-|---|---|---|---|
-| A | The app, no scope, no style | 11 | n/a |
-| B | A re-rendered as a sketch "with placeholder text" | 11 | 4% |
-| B2 | A re-rendered as a sketch, keeping every label and line of copy | 11 | 100% |
-| C | Scoped to one task, three screens maximum, sketch | 3 | n/a |
-| D1–D3 | Same scope, three different starting points, sketch | 3 each | n/a |
+| Run | Prompt asked for | Screens | Original copy kept | Generation time |
+|---|---|---|---|---|
+| A | The app, no scope, no style | 11 | n/a | 212 s |
+| B | A re-rendered as a sketch "with placeholder text" | 11 | 4% | 95 s |
+| B2 | A re-rendered as a sketch, keeping every label and line of copy | 11 | 100% | 173 s |
+| C | Scoped to one task, three screens maximum, sketch | 3 | n/a | 37 s |
+| D1–D3 | Same scope, three different starting points, sketch | 3 each | n/a | 57 s, 45 s, 42 s |
 
-Screens are counted from `<section class="screen">` tags. "Copy kept" is the share of distinct words (three letters or longer) on each screen of A that also appear on the same screen of the re-render, pooled across all eleven screens.
+Screens are counted from `<section class="screen">` tags. "Copy kept" is the share of distinct words (three letters or longer) on each screen of A that also appear on the same screen of the re-render, pooled across all eleven screens. Generation time is the wall-clock duration of each generation session, including the model writing the file.
 
 ## Limits
 
