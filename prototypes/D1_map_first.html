@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pothole Report Wireframe</title>
+<style>
+  :root{--ink:#222;--mid:#777;--light:#bbb;--paper:#fafafa;--fill:#e6e6e6;}
+  *{box-sizing:border-box}
+  body{margin:0;background:#ddd;color:var(--ink);font-family:"Comic Sans MS","Chalkboard SE","Comic Neue","Marker Felt",cursive;display:flex;justify-content:center;padding:16px}
+  .phone{width:360px;max-width:100%;height:700px;background:var(--paper);border:3px solid var(--ink);border-radius:28px 32px 26px 30px;position:relative;overflow:hidden;filter:url(#rough)}
+  .screen{display:none;position:absolute;inset:0;flex-direction:column}
+  .screen.active{display:flex}
+  .bar{height:52px;border-bottom:2px solid var(--ink);display:flex;align-items:center;padding:0 14px;gap:10px;font-size:17px;background:var(--paper)}
+  .bar .back{border:2px solid var(--ink);border-radius:8px 10px 7px 9px;padding:2px 9px;cursor:pointer;background:none;font:inherit}
+  .sk{border:2px solid var(--ink);border-radius:10px 14px 9px 12px}
+  .btn{display:block;width:100%;padding:14px;font:inherit;font-size:17px;text-align:center;cursor:pointer;background:var(--ink);color:var(--paper);border:2px solid var(--ink);border-radius:12px 9px 13px 10px}
+  .btn.ghost{background:var(--paper);color:var(--ink)}
+  .btn:disabled{background:var(--light);border-color:var(--mid);color:var(--mid);cursor:not-allowed}
+  .ph{height:10px;background:var(--light);border-radius:5px;margin:7px 0}
+  .note{font-size:13px;color:var(--mid)}
+  /* map */
+  .map{flex:1;position:relative;background:var(--fill);cursor:crosshair;overflow:hidden}
+  .map svg.streets{position:absolute;inset:0;width:100%;height:100%}
+  .search{position:absolute;top:12px;left:12px;right:12px;background:var(--paper);padding:10px 12px;font-size:14px;color:var(--mid)}
+  .hint{position:absolute;top:62px;left:50%;transform:translateX(-50%);background:var(--paper);padding:6px 12px;font-size:13px;white-space:nowrap}
+  .pin{position:absolute;width:34px;height:46px;transform:translate(-50%,-100%);pointer-events:none;display:none}
+  .locate{position:absolute;right:12px;bottom:12px;width:44px;height:44px;border-radius:50%;background:var(--paper);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px}
+  .sheet{border-top:2px solid var(--ink);padding:14px;background:var(--paper)}
+  .addr{font-size:15px;margin-bottom:10px;min-height:20px}
+  /* details */
+  .body{flex:1;padding:16px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+  .mini{height:110px;position:relative;background:var(--fill);overflow:hidden}
+  .photo{height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-style:dashed;cursor:pointer;position:relative;text-align:center}
+  .photo.has{border-style:solid;background:var(--fill)}
+  .x-img{position:absolute;inset:0;width:100%;height:100%}
+  textarea{width:100%;height:70px;font:inherit;font-size:14px;padding:8px;resize:none;background:var(--paper);color:var(--ink)}
+  label{font-size:14px}
+  .foot{padding:14px;border-top:2px solid var(--ink);display:flex;flex-direction:column;gap:8px}
+  /* confirm */
+  .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:16px;text-align:center}
+  .check{width:96px;height:96px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:48px}
+  .ref{padding:10px 18px;font-size:18px;letter-spacing:1px}
+  .summary{width:100%;text-align:left;padding:12px;font-size:14px}
+  .summary div{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--light)}
+  .summary div:last-child{border:none}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter></svg>
+
+<div class="phone">
+
+  <!-- SCREEN 1: place pin on map -->
+  <section class="screen active" data-screen="map">
+    <div class="bar"><strong>Report a pothole</strong></div>
+    <div class="map" id="map">
+      <svg class="streets" viewBox="0 0 360 450" preserveAspectRatio="none" aria-hidden="true">
+        <g stroke="#fff" stroke-width="22" fill="none" stroke-linecap="round">
+          <path d="M-10 120 Q120 110 370 140"/><path d="M-10 300 Q180 290 370 320"/>
+          <path d="M90 -10 Q100 200 80 460"/><path d="M250 -10 Q240 220 270 460"/>
+        </g>
+        <g stroke="#999" stroke-width="2" fill="none" stroke-dasharray="6 6">
+          <path d="M-10 120 Q120 110 370 140"/><path d="M-10 300 Q180 290 370 320"/>
+          <path d="M90 -10 Q100 200 80 460"/><path d="M250 -10 Q240 220 270 460"/>
+        </g>
+        <g fill="#ccc" stroke="#999" stroke-width="1.5">
+          <rect x="120" y="160" width="100" height="100" rx="6"/><rect x="10" y="160" width="55" height="110" rx="6"/>
+          <rect x="290" y="170" width="60" height="100" rx="6"/><rect x="120" y="20" width="100" height="70" rx="6"/>
+          <rect x="120" y="345" width="100" height="90" rx="6"/>
+        </g>
+        <circle cx="175" cy="300" r="7" fill="#555" stroke="#fff" stroke-width="3"/>
+      </svg>
+      <div class="search sk">&#9906; Search street or address...</div>
+      <div class="hint sk" id="hint">Tap the map where the pothole is</div>
+      <svg class="pin" id="pin" viewBox="0 0 34 46"><path d="M17 44 C5 28 2 22 2 16 A15 15 0 0 1 32 16 C32 22 29 28 17 44Z" fill="#222" stroke="#222" stroke-width="2"/><circle cx="17" cy="16" r="6" fill="#fafafa"/></svg>
+      <div class="locate sk" id="locate" title="Use my location">&#8982;</div>
+    </div>
+    <div class="sheet">
+      <div class="addr" id="addr"><span class="note">No location selected yet</span></div>
+      <button class="btn" id="confirmLoc" disabled>Confirm location</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 2: optional photo + note, submit -->
+  <section class="screen" data-screen="details">
+    <div class="bar"><button class="back" data-go="map">&larr;</button><strong>Add details</strong></div>
+    <div class="body">
+      <div>
+        <label>Location</label>
+        <div class="mini sk" style="margin-top:6px">
+          <svg class="x-img" viewBox="0 0 300 110" preserveAspectRatio="none"><path d="M-5 55 Q150 45 305 65" stroke="#fff" stroke-width="18" fill="none"/><path d="M-5 55 Q150 45 305 65" stroke="#999" stroke-width="2" stroke-dasharray="6 6" fill="none"/><path d="M150 52 C141 40 139 36 139 31 A11 11 0 0 1 161 31 C161 36 159 40 150 52Z" fill="#222"/></svg>
+        </div>
+        <div class="note" id="addr2" style="margin-top:6px">Near 123 Placeholder St</div>
+      </div>
+      <div>
+        <label>Photo <span class="note">(optional)</span></label>
+        <div class="photo sk" id="photo" style="margin-top:6px">
+          <div style="font-size:30px">&#9635;</div>
+          <div>Tap to take or add a photo</div>
+          <div class="note">Helps crews find it faster</div>
+        </div>
+      </div>
+      <div>
+        <label>Note <span class="note">(optional)</span></label>
+        <textarea class="sk" placeholder="e.g. Deep, in the right lane near the curb" style="margin-top:6px"></textarea>
+      </div>
+    </div>
+    <div class="foot">
+      <button class="btn" id="submit">Submit report</button>
+      <div class="note" style="text-align:center">No account needed</div>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: confirmation -->
+  <section class="screen" data-screen="confirmation">
+    <div class="bar"><strong>Report sent</strong></div>
+    <div class="center">
+      <div class="check sk">&#10003;</div>
+      <div style="font-size:22px">Thanks! Your report is in.</div>
+      <div class="note">The city's street crew will review it.</div>
+      <div class="ref sk">Ref #PH-<span id="refnum">00000</span></div>
+      <div class="summary sk">
+        <div><span>Location</span><span id="sumLoc">Near 123 Placeholder St</span></div>
+        <div><span>Photo</span><span id="sumPhoto">Not added</span></div>
+        <div><span>Submitted</span><span>Just now</span></div>
+      </div>
+      <div style="width:100%"><div class="ph" style="width:90%"></div><div class="ph" style="width:70%"></div></div>
+    </div>
+    <div class="foot"><button class="btn ghost" id="again">Done</button></div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  var screens=document.querySelectorAll('.screen');
+  function go(name){screens.forEach(function(s){s.classList.toggle('active',s.dataset.screen===name);});}
+  document.querySelectorAll('[data-go]').forEach(function(b){b.onclick=function(){go(b.dataset.go);};});
+
+  var map=document.getElementById('map'),pin=document.getElementById('pin'),hint=document.getElementById('hint'),
+      addr=document.getElementById('addr'),btn=document.getElementById('confirmLoc'),photo=document.getElementById('photo');
+  var streets=['Placeholder St','Sample Ave','Example Blvd','Lorem Rd'];var hasPhoto=false,label='';
+
+  function place(x,y){
+    pin.style.left=x+'px';pin.style.top=y+'px';pin.style.display='block';
+    hint.textContent='Drag or tap again to adjust';
+    var n=100+Math.round(x+y)%900;label='Near '+n+' '+streets[Math.round(x/90)%4];
+    addr.innerHTML='&#9906; '+label;btn.disabled=false;
+  }
+  map.addEventListener('click',function(e){
+    if(e.target.closest('.search')||e.target.closest('.locate'))return;
+    var r=map.getBoundingClientRect();place(e.clientX-r.left,e.clientY-r.top);
+  });
+  document.getElementById('locate').onclick=function(e){e.stopPropagation();var r=map.getBoundingClientRect();place(r.width*0.486,r.height*0.667);};
+  btn.onclick=function(){document.getElementById('addr2').textContent=label;go('details');};
+
+  photo.onclick=function(){
+    hasPhoto=!hasPhoto;photo.classList.toggle('has',hasPhoto);
+    photo.innerHTML=hasPhoto
+      ?'<svg class="x-img" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 0L100 100M100 0L0 100" stroke="#999" stroke-width="1.5"/></svg><div class="sk" style="position:relative;background:#fafafa;padding:4px 10px">Photo added &middot; tap to remove</div>'
+      :'<div style="font-size:30px">&#9635;</div><div>Tap to take or add a photo</div><div class="note">Helps crews find it faster</div>';
+  };
+  document.getElementById('submit').onclick=function(){
+    document.getElementById('refnum').textContent=String(10000+Math.floor(Math.random()*89999));
+    document.getElementById('sumLoc').textContent=label;
+    document.getElementById('sumPhoto').textContent=hasPhoto?'1 attached':'Not added';
+    go('confirmation');
+  };
+  document.getElementById('again').onclick=function(){
+    pin.style.display='none';btn.disabled=true;hint.textContent='Tap the map where the pothole is';
+    addr.innerHTML='<span class="note">No location selected yet</span>';if(hasPhoto)photo.onclick();
+    document.querySelector('textarea').value='';go('map');
+  };
+})();
+</script>
+</body>
+</html>

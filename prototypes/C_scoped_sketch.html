@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pothole Report Sketch</title>
+<style>
+  :root{--ink:#222;--mid:#777;--light:#bbb;--paper:#fafafa;--wash:#ececec}
+  *{box-sizing:border-box}
+  body{margin:0;background:#d6d6d6;font-family:"Comic Sans MS","Comic Neue","Chalkboard SE","Marker Felt",cursive;color:var(--ink);display:flex;justify-content:center;padding:16px}
+  .phone{width:100%;max-width:375px;min-height:680px;background:var(--paper);border:3px solid var(--ink);border-radius:34px 30px 36px 28px/28px 36px 30px 34px;padding:18px 16px 22px;position:relative;box-shadow:4px 5px 0 #999}
+  .notch{width:90px;height:10px;border:2px solid var(--ink);border-radius:8px 10px 7px 9px;margin:0 auto 14px}
+  .screen{display:none;flex-direction:column;gap:14px;min-height:610px}
+  .screen.active{display:flex}
+  .bar{display:flex;align-items:center;gap:10px;border-bottom:2px dashed var(--mid);padding-bottom:8px}
+  .bar h1{font-size:19px;margin:0;flex:1}
+  .step{font-size:12px;color:var(--mid)}
+  .back{background:none;border:2px solid var(--ink);border-radius:12px 9px 13px 8px;font:inherit;width:34px;height:30px;cursor:pointer}
+  p.hint{margin:0;font-size:14px;color:var(--mid)}
+  .sk{border:2px solid var(--ink);border-radius:6px 12px 7px 10px/11px 6px 12px 7px}
+  .map{position:relative;height:300px;background:
+     linear-gradient(90deg,transparent 48%,var(--light) 48%,var(--light) 52%,transparent 52%),
+     linear-gradient(0deg,transparent 30%,var(--light) 30%,var(--light) 34%,transparent 34%),
+     linear-gradient(0deg,transparent 70%,var(--light) 70%,var(--light) 73%,transparent 73%),
+     var(--wash);cursor:crosshair;overflow:hidden}
+  .map .lbl{position:absolute;top:8px;left:10px;font-size:12px;color:var(--mid)}
+  .pin{position:absolute;width:26px;height:26px;margin:-26px 0 0 -13px;border:3px solid var(--ink);border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--paper);display:none}
+  .pin.on{display:block}
+  .addr{padding:10px;font-size:14px}
+  .addr .line{height:8px;background:var(--light);border-radius:4px;margin-top:6px}
+  .linkbtn{background:none;border:none;font:inherit;text-decoration:underline;color:var(--ink);cursor:pointer;padding:0;font-size:14px;align-self:flex-start}
+  .btn{font:inherit;font-size:17px;padding:12px;background:var(--ink);color:var(--paper);border:2px solid var(--ink);border-radius:14px 9px 12px 10px/10px 13px 9px 14px;cursor:pointer;width:100%}
+  .btn[disabled]{background:var(--light);border-color:var(--mid);color:var(--mid);cursor:not-allowed}
+  .btn.ghost{background:none;color:var(--ink)}
+  .spacer{flex:1}
+  .photo{height:170px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;border-style:dashed;cursor:pointer;position:relative;background:var(--paper)}
+  .photo.has{border-style:solid;background:
+     linear-gradient(to top right,transparent calc(50% - 1px),var(--mid) 50%,transparent calc(50% + 1px)),
+     linear-gradient(to top left,transparent calc(50% - 1px),var(--mid) 50%,transparent calc(50% + 1px)),var(--wash)}
+  .photo.has .ph-empty{display:none}
+  .photo .ph-full{display:none;background:var(--paper);padding:2px 8px;border:2px solid var(--ink);border-radius:8px}
+  .photo.has .ph-full{display:block}
+  .plus{font-size:34px;line-height:1}
+  textarea{font:inherit;font-size:14px;width:100%;height:70px;padding:8px;resize:none;background:var(--paper);color:var(--ink)}
+  label{font-size:14px}
+  .opt{color:var(--mid);font-size:12px}
+  .summary{padding:10px;font-size:14px;display:grid;gap:4px}
+  .check{width:84px;height:84px;border:3px solid var(--ink);border-radius:48% 52% 50% 50%/52% 48% 52% 48%;margin:30px auto 4px;display:flex;align-items:center;justify-content:center;font-size:42px}
+  .center{text-align:center}
+  h2{margin:0;font-size:22px}
+  .ref{font-size:20px;letter-spacing:2px;padding:8px 14px;align-self:center}
+  .note{font-size:11px;color:var(--mid);text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+
+  <section class="screen active" data-screen="location">
+    <div class="bar"><h1>Report a pothole</h1><span class="step">1 of 2</span></div>
+    <p class="hint">Tap the map where the pothole is.</p>
+    <div class="map sk" id="map" role="button" aria-label="Map, tap to place pin">
+      <span class="lbl">[ map placeholder ]</span>
+      <div class="pin" id="pin"></div>
+    </div>
+    <button class="linkbtn" id="useLoc">Use my current location</button>
+    <div class="addr sk">
+      <strong id="addrText">No location yet</strong>
+      <div class="line" style="width:70%"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="toDetails" disabled>Next</button>
+  </section>
+
+  <section class="screen" data-screen="photo-submit">
+    <div class="bar"><button class="back" data-go="location" aria-label="Back">&lt;</button><h1>Add a photo</h1><span class="step">2 of 2</span></div>
+    <label>Photo <span class="opt">(optional)</span></label>
+    <div class="photo sk" id="photo" role="button" aria-label="Add photo">
+      <div class="ph-empty center"><div class="plus">+</div>Tap to take or choose a photo</div>
+      <span class="ph-full">photo added &middot; tap to remove</span>
+    </div>
+    <label for="note">Note <span class="opt">(optional)</span></label>
+    <textarea id="note" class="sk" placeholder="Lorem ipsum, e.g. near the crosswalk"></textarea>
+    <div class="summary sk">
+      <span>Location: <strong id="sumAddr">-</strong></span>
+      <span>Photo: <strong id="sumPhoto">none</strong></span>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="submit">Submit report</button>
+  </section>
+
+  <section class="screen" data-screen="confirmation">
+    <div class="check">&#10003;</div>
+    <h2 class="center">Report sent</h2>
+    <p class="hint center">Thanks. The city has received your pothole report.</p>
+    <div class="ref sk">#PH-<span id="refNo">0000</span></div>
+    <div class="summary sk">
+      <span>Location: <strong id="cAddr">-</strong></span>
+      <span>Photo: <strong id="cPhoto">none</strong></span>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="again">Report another pothole</button>
+    <div class="note">Wireframe &middot; placeholder content</div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var state={addr:null,photo:false};
+  var streets=["100 Main St","22 Oak Ave","5th St & Elm","48 River Rd","Park Blvd near Pine"];
+  function $(id){return document.getElementById(id)}
+  function go(name){
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active',s.dataset.screen===name)});
+    if(name==='photo-submit'){$('sumAddr').textContent=state.addr;$('sumPhoto').textContent=state.photo?'1 attached':'none';}
+  }
+  function place(x,y){
+    var pin=$('pin');pin.style.left=x+'px';pin.style.top=y+'px';pin.classList.add('on');
+    state.addr=streets[Math.floor(Math.random()*streets.length)];
+    $('addrText').textContent=state.addr;$('toDetails').disabled=false;
+  }
+  $('map').addEventListener('click',function(e){var r=this.getBoundingClientRect();place(e.clientX-r.left,e.clientY-r.top)});
+  $('useLoc').addEventListener('click',function(){var m=$('map');place(m.clientWidth/2,m.clientHeight/2)});
+  $('toDetails').addEventListener('click',function(){go('photo-submit')});
+  document.querySelectorAll('[data-go]').forEach(function(b){b.addEventListener('click',function(){go(b.dataset.go)})});
+  $('photo').addEventListener('click',function(){state.photo=!state.photo;this.classList.toggle('has',state.photo);$('sumPhoto').textContent=state.photo?'1 attached':'none'});
+  $('submit').addEventListener('click',function(){
+    $('refNo').textContent=String(Math.floor(1000+Math.random()*9000));
+    $('cAddr').textContent=state.addr;$('cPhoto').textContent=state.photo?'1 attached':'none';
+    go('confirmation');
+  });
+  $('again').addEventListener('click',function(){
+    state={addr:null,photo:false};$('pin').classList.remove('on');$('addrText').textContent='No location yet';
+    $('toDetails').disabled=true;$('photo').classList.remove('has');$('note').value='';go('location');
+  });
+})();
+</script>
+</body>
+</html>

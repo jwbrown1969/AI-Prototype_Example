@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FixMyStreet Pothole Reporter</title>
+<style>
+:root{
+  --asphalt:#1d2125; --asphalt-2:#2a3036; --ink:#14171a; --muted:#5d6670; --line:#e3e6ea;
+  --paper:#f6f5f1; --card:#ffffff; --signal:#ffc928; --signal-ink:#3a2d00; --go:#1f9d61;
+  --warn:#e2581e; --blue:#2463d6; --radius:16px;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(0,0,0,.08);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#cfd3d6;color:var(--ink);display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+.device{width:390px;height:844px;background:var(--paper);border-radius:44px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #111,0 30px 80px rgba(0,0,0,.35)}
+@media (max-width:480px){body{background:var(--paper)}.device{width:100vw;height:100dvh;border-radius:0;box-shadow:none}}
+.statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:14px;font-weight:600;position:absolute;top:0;left:0;right:0;z-index:30;pointer-events:none}
+.statusbar.light{color:#fff}
+@media (max-width:480px){.statusbar{display:none}}
+
+.screen{position:absolute;inset:0;display:none;flex-direction:column;background:var(--paper);padding-top:44px}
+@media (max-width:480px){.screen{padding-top:0}}
+.screen.active{display:flex;animation:in .22s ease}
+@keyframes in{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pad{padding:0 20px}
+
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 12px;min-height:56px}
+.topbar h2{font-size:17px;font-weight:700;flex:1;text-align:center;margin-right:40px}
+.icon-btn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.icon-btn:active{background:rgba(0,0,0,.06)}
+.steps{display:flex;gap:6px;padding:0 20px 14px}
+.steps i{flex:1;height:4px;border-radius:4px;background:var(--line)}
+.steps i.on{background:var(--asphalt)}
+
+h1{font-size:28px;line-height:1.15;letter-spacing:-.02em}
+.lead{color:var(--muted);font-size:15px;line-height:1.5}
+.label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border-radius:14px;font-weight:700;font-size:16px;width:100%;transition:transform .08s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--asphalt);color:#fff}
+.btn-signal{background:var(--signal);color:var(--signal-ink)}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.footer{padding:12px 20px 26px;background:linear-gradient(transparent,var(--paper) 30%)}
+
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* Welcome */
+[data-screen="welcome"]{background:var(--asphalt);color:#fff}
+.welcome-art{flex:1;position:relative;overflow:hidden}
+.welcome-art svg{position:absolute;inset:0;width:100%;height:100%}
+.welcome-copy{padding:0 24px 8px}
+.welcome-copy h1{font-size:34px}
+.welcome-copy .lead{color:#b9c0c7;margin-top:10px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em;font-size:18px;padding:16px 24px}
+.brand b{width:30px;height:30px;border-radius:9px;background:var(--signal);display:grid;place-items:center;color:var(--signal-ink)}
+
+/* Home map */
+.map{position:relative;flex:1;overflow:hidden;background:#e8e6df}
+.map svg.base{position:absolute;inset:0;width:100%;height:100%}
+.pin{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center}
+.pin span{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25);border:2px solid #fff}
+.pin span i{transform:rotate(45deg);font-style:normal;font-size:12px;font-weight:800;color:#fff}
+.pin.open span{background:var(--warn)}
+.pin.prog span{background:var(--blue)}
+.pin.done span{background:var(--go)}
+.pin.mine span{background:var(--signal)} .pin.mine span i{color:var(--signal-ink)}
+.me-dot{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--blue);border:3px solid #fff;box-shadow:0 0 0 8px rgba(36,99,214,.18);transform:translate(-50%,-50%)}
+.searchbar{position:absolute;top:12px;left:16px;right:16px;display:flex;gap:10px;z-index:2}
+.searchbar .field{flex:1;height:48px;border-radius:14px;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--muted);font-size:15px}
+.searchbar .avatar{width:48px;height:48px;border-radius:14px;background:#fff;box-shadow:var(--shadow);display:grid;place-items:center;font-weight:800}
+.legend{position:absolute;top:72px;left:16px;display:flex;gap:6px;z-index:2}
+.chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;background:#fff;box-shadow:var(--shadow);font-size:13px;font-weight:600}
+.chip i{width:8px;height:8px;border-radius:50%}
+.sheet{background:var(--card);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.08);padding:10px 20px 14px;position:relative;z-index:3}
+.grab{width:40px;height:5px;border-radius:5px;background:var(--line);margin:0 auto 12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 16px}
+.stat{background:var(--paper);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:20px;letter-spacing:-.02em}
+.stat small{color:var(--muted);font-size:12px}
+.tabbar{display:flex;border-top:1px solid var(--line);background:#fff;padding:6px 8px 20px}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--muted);padding:6px 0}
+.tabbar button.on{color:var(--ink)}
+.fab-wrap{position:absolute;right:16px;bottom:16px;z-index:2}
+.round{width:48px;height:48px;border-radius:14px;background:#fff;box-shadow:var(--shadow);display:grid;place-items:center}
+
+/* Location step */
+.crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);pointer-events:none;z-index:2;display:flex;flex-direction:column;align-items:center}
+.crosshair .stem{width:3px;height:16px;background:var(--asphalt)}
+.crosshair .head{width:44px;height:44px;border-radius:50%;background:var(--signal);border:3px solid var(--asphalt);display:grid;place-items:center;box-shadow:0 6px 14px rgba(0,0,0,.25)}
+.crosshair .shadow{width:14px;height:5px;border-radius:50%;background:rgba(0,0,0,.25);margin-top:-2px}
+.addr{display:flex;gap:12px;align-items:flex-start}
+.addr .ic{width:40px;height:40px;border-radius:12px;background:var(--paper);display:grid;place-items:center;flex:none}
+.addr b{display:block;font-size:16px}
+.addr small{color:var(--muted);font-size:13px}
+.hint{font-size:13px;color:var(--muted);margin:10px 0 14px;display:flex;gap:8px;align-items:center}
+.dup{background:#fff7dc;border:1px solid #f3dd90;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4;margin-bottom:12px;display:none}
+.dup.show{display:block}
+.dup button{font-weight:700;text-decoration:underline;font-size:13px}
+
+/* Photo step */
+.camera{margin:4px 20px 0;border-radius:20px;overflow:hidden;position:relative;aspect-ratio:3/4;background:#111}
+.camera svg{width:100%;height:100%;display:block}
+.camera .frame{position:absolute;inset:18px;border:2px dashed rgba(255,255,255,.55);border-radius:14px}
+.camera .tip{position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font-size:13px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.camera .shot{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.camera .shot.flash{animation:flash .35s}
+@keyframes flash{0%{opacity:.9}100%{opacity:0}}
+.thumbs{display:flex;gap:10px;padding:14px 20px 0;align-items:center}
+.thumb{width:62px;height:62px;border-radius:12px;overflow:hidden;position:relative;background:#333;flex:none}
+.thumb svg{width:100%;height:100%}
+.thumb button{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:20px}
+.thumb.empty{background:transparent;border:1.5px dashed var(--line)}
+.shutter-row{display:flex;align-items:center;justify-content:space-between;padding:16px 36px 0}
+.shutter{width:74px;height:74px;border-radius:50%;border:4px solid var(--asphalt);display:grid;place-items:center}
+.shutter i{width:58px;height:58px;border-radius:50%;background:var(--asphalt);display:block}
+.shutter:active i{transform:scale(.92)}
+.small-act{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--muted);width:60px}
+
+/* Details */
+.group{margin-top:22px}
+.group .label{margin-bottom:10px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center;font-size:13px;font-weight:600}
+.seg button .sz{display:block;margin:0 auto 6px;border-radius:50%;background:var(--asphalt-2)}
+.seg button.on{border-color:var(--asphalt);background:var(--asphalt);color:#fff}
+.seg button.on .sz{background:var(--signal)}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{height:38px;padding:0 14px;border-radius:999px;background:#fff;border:1.5px solid var(--line);font-size:14px;font-weight:600}
+.opt.on{background:var(--signal);border-color:var(--signal);color:var(--signal-ink)}
+textarea{width:100%;min-height:96px;border-radius:14px;border:1.5px solid var(--line);background:#fff;padding:12px 14px;font-size:15px;resize:none;line-height:1.45}
+textarea:focus,input:focus{outline:none;border-color:var(--asphalt)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:14px;padding:14px;border:1.5px solid var(--line)}
+.toggle-row b{font-size:15px;display:block}
+.toggle-row small{font-size:13px;color:var(--muted)}
+.switch{width:50px;height:30px;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .15s}
+.switch.on{background:var(--go)} .switch.on::after{left:23px}
+
+/* Review */
+.review-hero{margin:4px 20px 0;border-radius:18px;overflow:hidden;position:relative;height:180px}
+.review-hero svg{width:100%;height:100%;display:block}
+.review-hero .tag{position:absolute;left:12px;bottom:12px}
+.rows{margin:16px 20px 0}
+.row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);font-size:15px}
+.row:last-child{border:0}
+.row span{color:var(--muted)}
+.row b{text-align:right;font-weight:600}
+.row button{color:var(--blue);font-weight:700;font-size:13px}
+.contact{margin:8px 20px 0;padding:14px;border-radius:14px;background:#fff;border:1.5px solid var(--line)}
+.contact input{width:100%;border:0;border-bottom:1px solid var(--line);padding:10px 0;font-size:15px;background:transparent}
+.contact input:last-child{border:0}
+.fine{font-size:12px;color:var(--muted);line-height:1.45;margin:12px 20px 0}
+
+/* Submitted */
+[data-screen="submitted"]{background:var(--asphalt);color:#fff}
+.done-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 28px}
+.check{width:84px;height:84px;border-radius:26px;background:var(--signal);display:grid;place-items:center;margin-bottom:28px;animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+.ticket{margin-top:26px;background:var(--asphalt-2);border-radius:16px;padding:16px}
+.ticket .row{border-color:#3a424a;padding:10px 0;font-size:14px}
+.ticket .row span{color:#9aa3ab}
+.timeline-mini{display:flex;gap:6px;margin-top:14px}
+.timeline-mini div{flex:1}
+.timeline-mini i{display:block;height:4px;border-radius:4px;background:#3a424a;margin-bottom:6px}
+.timeline-mini i.on{background:var(--signal)}
+.timeline-mini small{font-size:11px;color:#9aa3ab}
+[data-screen="submitted"] .footer{background:none}
+[data-screen="submitted"] .btn-ghost{color:#fff;border-color:#3a424a}
+
+/* Lists */
+.filters{display:flex;gap:8px;padding:0 20px 14px;overflow-x:auto}
+.filters .opt{flex:none}
+.list{padding:0 20px 20px;display:flex;flex-direction:column;gap:10px}
+.item{display:flex;gap:12px;padding:12px;align-items:center;text-align:left;width:100%}
+.item .th{width:64px;height:64px;border-radius:12px;overflow:hidden;flex:none}
+.item .th svg{width:100%;height:100%}
+.item .meta{flex:1;min-width:0}
+.item .meta b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .meta small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.status{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:700;margin-top:6px}
+.status i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.s-open{background:#fde8df;color:#b2410f}
+.s-prog{background:#e1eafb;color:#1b4fae}
+.s-done{background:#ddf3e8;color:#167548}
+.s-rec{background:#fff4cc;color:#7a5b00}
+
+/* Detail */
+.detail-hero{height:230px;position:relative;flex:none}
+.detail-hero svg{width:100%;height:100%;display:block}
+.detail-hero .icon-btn{position:absolute;top:10px;left:12px;background:rgba(255,255,255,.92)}
+.detail-hero .icon-btn.r{left:auto;right:12px}
+.detail-body{padding:18px 20px 24px}
+.detail-body h1{font-size:24px}
+.upvote{display:flex;align-items:center;gap:12px;margin-top:16px;padding:12px 14px}
+.upvote .count{font-size:22px;font-weight:800}
+.upvote small{color:var(--muted);font-size:13px;display:block}
+.upvote button{margin-left:auto;height:40px;padding:0 14px;border-radius:12px;background:var(--paper);font-weight:700;font-size:14px}
+.upvote button.on{background:var(--signal);color:var(--signal-ink)}
+.timeline{margin-top:22px;position:relative;padding-left:26px}
+.timeline::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl{position:relative;padding-bottom:18px}
+.tl::before{content:"";position:absolute;left:-23px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--line)}
+.tl.on::before{background:var(--go);border-color:var(--go)}
+.tl.now::before{background:var(--signal);border-color:var(--asphalt)}
+.tl b{display:block;font-size:15px}
+.tl small{font-size:13px;color:var(--muted)}
+.tl p{font-size:14px;color:var(--muted);margin-top:4px;line-height:1.4}
+
+/* Updates */
+.notif{display:flex;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);text-align:left;width:100%;background:transparent}
+.notif.unread{background:#fffbea}
+.notif .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+.notif b{display:block;font-size:15px}
+.notif p{font-size:14px;color:var(--muted);line-height:1.4;margin-top:2px}
+.notif small{font-size:12px;color:var(--muted)}
+
+/* Profile */
+.profile-head{display:flex;align-items:center;gap:14px;padding:6px 20px 18px}
+.profile-head .av{width:60px;height:60px;border-radius:18px;background:var(--signal);display:grid;place-items:center;font-weight:800;font-size:22px;color:var(--signal-ink)}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 20px}
+.menu{margin:18px 20px 0;overflow:hidden}
+.menu button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:16px;border-bottom:1px solid var(--line);font-size:15px;font-weight:500;text-align:left}
+.menu button:last-child{border:0}
+
+.toast{position:absolute;left:50%;bottom:110px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:50;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.badge-dot{position:relative}
+.badge-dot::after{content:"";position:absolute;top:4px;right:calc(50% - 14px);width:8px;height:8px;border-radius:50%;background:var(--warn);border:2px solid #fff}
+</style>
+</head>
+<body>
+<div class="device" id="device">
+  <div class="statusbar" id="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679; 5G &#9646;</span></div>
+
+  <!-- SVG defs for reusable pothole art -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <radialGradient id="holeG" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#0e0f10"/><stop offset=".7" stop-color="#25282b"/><stop offset="1" stop-color="#4a4f54"/></radialGradient>
+      <pattern id="grain" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#5b6066"/><circle cx="1" cy="1" r=".8" fill="#6c7177"/><circle cx="4" cy="3" r=".7" fill="#4c5156"/><circle cx="2" cy="5" r=".6" fill="#71767c"/></pattern>
+      <symbol id="pothole" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="url(#grain)"/>
+        <rect x="140" y="-10" width="10" height="320" fill="#e9d36b" opacity=".85" transform="rotate(8 150 150)"/>
+        <path d="M70 160 C60 110 120 85 170 95 C230 105 250 150 230 190 C210 230 140 235 105 220 C80 210 74 190 70 160Z" fill="url(#holeG)"/>
+        <path d="M95 165 C100 140 140 125 175 135 C205 145 210 175 190 195 C165 210 120 205 100 190Z" fill="#2c3a44" opacity=".65"/>
+        <path d="M120 170 C140 160 170 162 182 175" stroke="#7d98a8" stroke-width="3" fill="none" opacity=".5"/>
+        <path d="M230 190 L270 220 M70 160 L30 150 M170 95 L190 50 M105 220 L90 270" stroke="#2b2f33" stroke-width="3" fill="none"/>
+      </symbol>
+      <symbol id="pothole2" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="url(#grain)"/>
+        <rect x="0" y="230" width="300" height="70" fill="#9ea3a0"/>
+        <path d="M60 120 C80 80 160 70 200 100 C240 130 220 180 170 190 C120 200 50 170 60 120Z" fill="url(#holeG)"/>
+        <path d="M200 100 L250 60 M60 120 L20 100" stroke="#2b2f33" stroke-width="3"/>
+      </symbol>
+      <symbol id="pothole3" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="url(#grain)"/>
+        <ellipse cx="160" cy="150" rx="70" ry="40" fill="url(#holeG)"/>
+        <ellipse cx="90" cy="210" rx="30" ry="18" fill="url(#holeG)"/>
+        <path d="M0 60 L300 70" stroke="#fff" stroke-width="8" stroke-dasharray="40 30" opacity=".8"/>
+      </symbol>
+      <symbol id="patched" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="url(#grain)"/>
+        <path d="M60 110 L240 100 L245 200 L65 210Z" fill="#26292c"/>
+        <path d="M60 110 L240 100 L245 200 L65 210Z" fill="none" stroke="#151719" stroke-width="4"/>
+      </symbol>
+      <symbol id="citymap" viewBox="0 0 390 600" preserveAspectRatio="xMidYMid slice">
+        <rect width="390" height="600" fill="#ebe8e0"/>
+        <rect x="250" y="40" width="160" height="140" rx="8" fill="#cfe3c4"/>
+        <rect x="-20" y="390" width="140" height="120" rx="8" fill="#cfe3c4"/>
+        <path d="M-10 520 C80 500 140 560 230 540 S360 560 410 520 L410 620 L-10 620Z" fill="#bcd7ea"/>
+        <g fill="#f4f2ec">
+          <rect x="20" y="30" width="90" height="70" rx="4"/><rect x="130" y="30" width="100" height="70" rx="4"/>
+          <rect x="20" y="130" width="90" height="90" rx="4"/><rect x="130" y="130" width="100" height="90" rx="4"/>
+          <rect x="250" y="210" width="120" height="70" rx="4"/><rect x="20" y="250" width="90" height="110" rx="4"/>
+          <rect x="130" y="250" width="100" height="50" rx="4"/><rect x="130" y="320" width="100" height="60" rx="4"/>
+          <rect x="250" y="310" width="120" height="100" rx="4"/><rect x="140" y="410" width="90" height="80" rx="4"/>
+          <rect x="250" y="430" width="120" height="60" rx="4"/>
+        </g>
+        <g stroke="#fff" stroke-linecap="round">
+          <path d="M0 115 H410" stroke-width="16"/><path d="M0 235 H410" stroke-width="12"/>
+          <path d="M0 395 H410" stroke-width="12"/><path d="M120 0 V600" stroke-width="14"/>
+          <path d="M240 0 V600" stroke-width="12"/><path d="M0 300 C120 290 180 300 240 300" stroke-width="8"/>
+        </g>
+        <path d="M0 115 H410" stroke="#ffd97a" stroke-width="5"/>
+        <path d="M120 0 V600" stroke="#ffd97a" stroke-width="5"/>
+        <g font-family="system-ui" font-size="10" fill="#7d8389" font-weight="600">
+          <text x="300" y="111">ELM AVE</text><text x="300" y="231">MAPLE ST</text><text x="20" y="391">RIVER RD</text>
+          <text x="126" y="560" transform="rotate(-90 126 560)">MAIN ST</text><text x="275" y="160" fill="#5c7a52">Lincoln Park</text>
+        </g>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- 1. WELCOME -->
+  <section class="screen" data-screen="welcome">
+    <div class="brand"><b>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M4 18c2-6 6-9 8-9s6 3 8 9"/><circle cx="12" cy="14" r="2" fill="currentColor"/></svg>
+    </b>Street Fix</div>
+    <div class="welcome-art">
+      <svg viewBox="0 0 390 420" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="road" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3036"/><stop offset="1" stop-color="#3b434a"/></linearGradient></defs>
+        <path d="M150 0 L240 0 L420 420 L-30 420Z" fill="url(#road)"/>
+        <g fill="#ffc928"><path d="M191 20 h8 l3 40 h-14z"/><path d="M188 100 h14 l5 60 h-24z"/><path d="M183 210 h24 l8 90 h-40z"/><path d="M176 350 h38 l10 90 h-58z"/></g>
+        <ellipse cx="120" cy="330" rx="64" ry="22" fill="#111" /><ellipse cx="120" cy="326" rx="56" ry="17" fill="#1a1d20"/>
+        <path d="M60 330 l-30 8 M182 332 l26 10 M120 308 l6 -18" stroke="#111" stroke-width="2"/>
+        <g transform="translate(260 220)">
+          <path d="M0 80 L20 0 L40 80Z" fill="#ff7a1a"/><rect x="8" y="30" width="24" height="9" fill="#fff"/><rect x="4" y="52" width="32" height="9" fill="#fff"/><rect x="-6" y="78" width="52" height="8" rx="2" fill="#ff7a1a"/>
+        </g>
+        <g transform="translate(96 250)"><circle r="20" fill="#ffc928"/><path d="M-6 0 l4 5 l9 -11" stroke="#3a2d00" stroke-width="3.5" fill="none" stroke-linecap="round" transform="translate(0 2)"/></g>
+      </svg>
+    </div>
+    <div class="welcome-copy">
+      <h1>Spot it. Snap it.<br>Get it fixed.</h1>
+      <p class="lead">Report potholes in under a minute and follow along as city crews repair them.</p>
+    </div>
+    <div class="footer" style="background:none">
+      <button class="btn btn-signal" data-go="home">Get started</button>
+      <button class="btn" style="color:#b9c0c7;height:44px;margin-top:6px;font-weight:600;font-size:14px" data-go="home">I already have an account</button>
+    </div>
+  </section>
+
+  <!-- 2. HOME MAP -->
+  <section class="screen" data-screen="home">
+    <div class="map">
+      <svg class="base"><use href="#citymap"/></svg>
+      <div class="searchbar">
+        <div class="field">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          Search an address
+        </div>
+        <button class="avatar" data-go="profile">JB</button>
+      </div>
+      <div class="legend">
+        <span class="chip"><i style="background:var(--warn)"></i>Reported</span>
+        <span class="chip"><i style="background:var(--blue)"></i>Scheduled</span>
+        <span class="chip"><i style="background:var(--go)"></i>Fixed</span>
+      </div>
+      <button class="pin open" style="left:30%;top:24%" data-detail="r2"><span><i>!</i></span></button>
+      <button class="pin prog" style="left:66%;top:38%" data-detail="r1"><span><i>&#9679;</i></span></button>
+      <button class="pin done" style="left:20%;top:62%" data-detail="r3"><span><i>&#10003;</i></span></button>
+      <button class="pin open" style="left:78%;top:70%" data-detail="r4"><span><i>!</i></span></button>
+      <button class="pin prog" style="left:45%;top:82%" data-detail="r5"><span><i>&#9679;</i></span></button>
+      <div class="me-dot" style="left:52%;top:52%"></div>
+      <div class="fab-wrap"><button class="round" data-toast="Centered on your location">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+      </button></div>
+    </div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="label">Your neighborhood this month</div>
+      <div class="stats">
+        <div class="stat"><b>42</b><small>Reported</small></div>
+        <div class="stat"><b>17</b><small>Scheduled</small></div>
+        <div class="stat"><b>96</b><small>Fixed</small></div>
+      </div>
+      <button class="btn btn-signal" data-go="locate">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>
+        Report a pothole
+      </button>
+    </div>
+    <nav class="tabbar">
+      <button class="on" data-go="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>Map</button>
+      <button data-go="my-reports"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>My reports</button>
+      <button class="badge-dot" data-go="updates"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg>Updates</button>
+      <button data-go="profile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Profile</button>
+    </nav>
+  </section>
+
+  <!-- 3. LOCATE -->
+  <section class="screen" data-screen="locate">
+    <div class="topbar">
+      <button class="icon-btn" data-go="home" aria-label="Close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <h2>Where is it?</h2>
+    </div>
+    <div class="steps"><i class="on"></i><i></i><i></i><i></i></div>
+    <div class="map" id="locMap">
+      <svg class="base" id="locBase" style="transition:transform .25s"><use href="#citymap"/></svg>
+      <div class="crosshair"><div class="head"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d2125" stroke-width="2.6"><path d="M4 16c2-5 5-7 8-7s6 2 8 7"/></svg></div><div class="stem"></div><div class="shadow"></div></div>
+      <div class="fab-wrap" style="display:flex;flex-direction:column;gap:8px">
+        <button class="round" id="nudge" aria-label="Move map"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg></button>
+        <button class="round" id="gps" aria-label="Use my location"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></button>
+      </div>
+    </div>
+    <div class="sheet">
+      <div class="addr">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></div>
+        <div><b id="addrLine">418 Maple St</b><small id="addrSub">Near Main St intersection &middot; Ward 3</small></div>
+      </div>
+      <p class="hint"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>Drag the map so the pin sits on the pothole.</p>
+      <div class="dup" id="dupBox">Someone reported a pothole 30 ft from here 2 days ago. <button data-detail="r2">View it</button> or keep going if this is a different one.</div>
+      <button class="btn btn-primary" data-go="photo">Confirm location</button>
+    </div>
+  </section>
+
+  <!-- 4. PHOTO -->
+  <section class="screen" data-screen="photo">
+    <div class="topbar">
+      <button class="icon-btn" data-go="locate" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Add a photo</h2>
+    </div>
+    <div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    <div class="scroll">
+      <div class="camera">
+        <svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice"><use href="#pothole" width="300" height="400"/></svg>
+        <div class="frame"></div>
+        <div class="tip" id="camTip">Include a shoe or cone for scale</div>
+        <div class="shot" id="flash"></div>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+      <div class="shutter-row">
+        <button class="small-act" data-toast="Opening photo library"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>Library</button>
+        <button class="shutter" id="shutter" aria-label="Take photo"><i></i></button>
+        <button class="small-act" data-go="details" id="skipPhoto">Skip<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+    </div>
+    <div class="footer"><button class="btn btn-primary" id="photoNext" data-go="details" disabled>Continue</button></div>
+  </section>
+
+  <!-- 5. DETAILS -->
+  <section class="screen" data-screen="details">
+    <div class="topbar">
+      <button class="icon-btn" data-go="photo" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Details</h2>
+    </div>
+    <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+    <div class="scroll pad">
+      <div class="group" style="margin-top:6px">
+        <div class="label">How big is it?</div>
+        <div class="seg" id="sizeSeg">
+          <button data-size="Small"><span class="sz" style="width:14px;height:14px"></span>Small<br><small style="font-weight:500;opacity:.7">Fist</small></button>
+          <button data-size="Medium" class="on"><span class="sz" style="width:22px;height:22px"></span>Medium<br><small style="font-weight:500;opacity:.7">Dinner plate</small></button>
+          <button data-size="Large"><span class="sz" style="width:30px;height:30px"></span>Large<br><small style="font-weight:500;opacity:.7">Tire or bigger</small></button>
+        </div>
+      </div>
+      <div class="group">
+        <div class="label">Where on the road?</div>
+        <div class="opts" data-single id="whereOpts">
+          <button class="opt on">Driving lane</button><button class="opt">Bike lane</button><button class="opt">Crosswalk</button><button class="opt">Shoulder</button><button class="opt">Parking lane</button>
+        </div>
+      </div>
+      <div class="group">
+        <div class="label">Any hazards?</div>
+        <div class="opts" id="hazOpts">
+          <button class="opt">Cars swerving</button><button class="opt">Water filled</button><button class="opt">Damaged my car</button><button class="opt">Near a school</button>
+        </div>
+      </div>
+      <div class="group">
+        <div class="label">Notes for the crew (optional)</div>
+        <textarea id="notes" placeholder="e.g. Hard to see at night, right after the bus stop"></textarea>
+      </div>
+      <div class="group" style="margin-bottom:24px">
+        <div class="toggle-row">
+          <div><b>Notify me of updates</b><small>We'll text you when it's scheduled and fixed</small></div>
+          <button class="switch on" id="notifySwitch" aria-label="Toggle updates"></button>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><button class="btn btn-primary" data-go="review">Review report</button></div>
+  </section>
+
+  <!-- 6. REVIEW -->
+  <section class="screen" data-screen="review">
+    <div class="topbar">
+      <button class="icon-btn" data-go="details" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Review</h2>
+    </div>
+    <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+    <div class="scroll">
+      <div class="review-hero" id="reviewHero">
+        <svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice"><use href="#pothole" width="300" height="300" y="-60"/></svg>
+        <span class="chip tag" id="photoCount">1 photo</span>
+      </div>
+      <div class="rows">
+        <div class="row"><span>Location</span><div style="text-align:right"><b id="rvAddr">418 Maple St</b><br><button data-go="locate">Edit</button></div></div>
+        <div class="row"><span>Size</span><div style="text-align:right"><b id="rvSize">Medium</b><br><button data-go="details">Edit</button></div></div>
+        <div class="row"><span>Position</span><b id="rvWhere">Driving lane</b></div>
+        <div class="row"><span>Hazards</span><b id="rvHaz">None noted</b></div>
+        <div class="row"><span>Notes</span><b id="rvNotes" style="max-width:200px">None</b></div>
+      </div>
+      <div class="label" style="margin:14px 20px 0">Contact (optional)</div>
+      <div class="contact">
+        <input type="text" value="John Brown" aria-label="Name">
+        <input type="tel" value="(555) 012-3344" aria-label="Phone">
+      </div>
+      <p class="fine">Your contact details are only shared with Public Works staff. Photos and location become part of the public record.</p>
+      <div style="height:20px"></div>
+    </div>
+    <div class="footer"><button class="btn btn-signal" id="submitBtn">Submit report</button></div>
+  </section>
+
+  <!-- 7. SUBMITTED -->
+  <section class="screen" data-screen="submitted">
+    <div class="done-wrap">
+      <div class="check"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3a2d00" stroke-width="3" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
+      <h1>Thanks. Your report is in.</h1>
+      <p class="lead" style="color:#b9c0c7;margin-top:10px">Public Works typically inspects within 2 business days and repairs medium potholes within 10.</p>
+      <div class="ticket">
+        <div class="row"><span>Ticket</span><b id="ticketNo">#PH-24817</b></div>
+        <div class="row"><span>Location</span><b id="ticketAddr">418 Maple St</b></div>
+        <div class="timeline-mini">
+          <div><i class="on"></i><small>Received</small></div>
+          <div><i></i><small>Inspected</small></div>
+          <div><i></i><small>Scheduled</small></div>
+          <div><i></i><small>Fixed</small></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn btn-signal" data-go="my-reports">Track my report</button>
+      <button class="btn btn-ghost" style="margin-top:10px" data-go="home">Back to map</button>
+    </div>
+  </section>
+
+  <!-- 8. MY REPORTS -->
+  <section class="screen" data-screen="my-reports">
+    <div class="topbar" style="padding-left:20px"><h1 style="font-size:26px;flex:1">My reports</h1></div>
+    <div class="filters" id="filters">
+      <button class="opt on" data-f="all">All</button><button class="opt" data-f="open">Open</button><button class="opt" data-f="done">Fixed</button>
+    </div>
+    <div class="scroll"><div class="list" id="reportList"></div></div>
+    <nav class="tabbar">
+      <button data-go="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>Map</button>
+      <button class="on" data-go="my-reports"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>My reports</button>
+      <button class="badge-dot" data-go="updates"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg>Updates</button>
+      <button data-go="profile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Profile</button>
+    </nav>
+  </section>
+
+  <!-- 9. REPORT DETAIL -->
+  <section class="screen" data-screen="report-detail">
+    <div class="scroll">
+      <div class="detail-hero">
+        <svg viewBox="0 0 390 230" preserveAspectRatio="xMidYMid slice" id="detailImg"><use href="#pothole" width="390" height="390" y="-80"/></svg>
+        <button class="icon-btn" id="detailBack" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="icon-btn r" data-toast="Link copied" aria-label="Share"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13M7 8l5-5 5 5M5 14v5h14v-5"/></svg></button>
+      </div>
+      <div class="detail-body">
+        <div id="dStatus"></div>
+        <h1 id="dTitle" style="margin-top:8px">418 Maple St</h1>
+        <p class="lead" id="dSub" style="margin-top:4px">Medium &middot; Driving lane &middot; Ticket #PH-24817</p>
+        <div class="card upvote">
+          <div><div class="count" id="voteCount">1</div><small>neighbors affected</small></div>
+          <button id="voteBtn">I hit this too</button>
+        </div>
+        <div class="label" style="margin-top:24px">Progress</div>
+        <div class="timeline" id="dTimeline"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. UPDATES -->
+  <section class="screen" data-screen="updates">
+    <div class="topbar" style="padding-left:20px"><h1 style="font-size:26px;flex:1">Updates</h1><button class="icon-btn" data-toast="All marked as read" style="font-size:13px;font-weight:700;width:auto;padding:0 10px;color:var(--blue)">Mark read</button></div>
+    <div class="scroll">
+      <button class="notif unread" data-detail="r1">
+        <div class="ic" style="background:#e1eafb;color:var(--blue)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+        <div><b>Repair scheduled</b><p>Crew assigned to 1120 Elm Ave for Thursday morning.</p><small>2 hours ago</small></div>
+      </button>
+      <button class="notif unread" data-detail="r2">
+        <div class="ic" style="background:#fff4cc;color:#7a5b00"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 11v9H4v-9zM7 11l4-8a2 2 0 0 1 2 2v4h6a2 2 0 0 1 2 2l-2 7a2 2 0 0 1-2 2H7"/></svg></div>
+        <div><b>5 neighbors confirmed</b><p>Others also reported Main St &amp; River Rd. Priority raised.</p><small>Yesterday</small></div>
+      </button>
+      <button class="notif" data-detail="r3">
+        <div class="ic" style="background:#ddf3e8;color:var(--go)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
+        <div><b>Pothole fixed</b><p>Lincoln Park entrance was patched. Thanks for reporting!</p><small>Sep 28</small></div>
+      </button>
+      <button class="notif" data-detail="r3">
+        <div class="ic" style="background:#f0eee8;color:var(--muted)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></div>
+        <div><b>Inspected</b><p>An inspector verified the pothole at Lincoln Park entrance.</p><small>Sep 22</small></div>
+      </button>
+    </div>
+    <nav class="tabbar">
+      <button data-go="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>Map</button>
+      <button data-go="my-reports"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>My reports</button>
+      <button class="on" data-go="updates"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg>Updates</button>
+      <button data-go="profile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Profile</button>
+    </nav>
+  </section>
+
+  <!-- 11. PROFILE -->
+  <section class="screen" data-screen="profile">
+    <div class="topbar" style="padding-left:20px"><h1 style="font-size:26px;flex:1">Profile</h1></div>
+    <div class="scroll">
+      <div class="profile-head">
+        <div class="av">JB</div>
+        <div><b style="font-size:18px">John Brown</b><div class="lead" style="font-size:14px">Ward 3 &middot; Reporting since 2025</div></div>
+      </div>
+      <div class="badges">
+        <div class="stat" style="background:#fff;box-shadow:var(--shadow)"><b id="pfTotal">4</b><small>Reports</small></div>
+        <div class="stat" style="background:#fff;box-shadow:var(--shadow)"><b>2</b><small>Fixed</small></div>
+        <div class="stat" style="background:#fff;box-shadow:var(--shadow)"><b>9</b><small>Confirms</small></div>
+      </div>
+      <div class="card menu">
+        <button data-toast="Notification settings">Notifications <span style="color:var(--muted)">Text &amp; push</span></button>
+        <button data-toast="Language settings">Language <span style="color:var(--muted)">English</span></button>
+        <button data-toast="Opening city 311 line">Call 311 for emergencies <span>&rsaquo;</span></button>
+        <button data-toast="Privacy details">Privacy &amp; data <span>&rsaquo;</span></button>
+        <button data-go="welcome">Sign out <span>&rsaquo;</span></button>
+      </div>
+      <p class="fine" style="margin-bottom:24px">For dangerous road conditions that need immediate attention, call 911.</p>
+    </div>
+    <nav class="tabbar">
+      <button data-go="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>Map</button>
+      <button data-go="my-reports"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>My reports</button>
+      <button class="badge-dot" data-go="updates"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg>Updates</button>
+      <button class="on" data-go="profile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Profile</button>
+    </nav>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const statusbar = $('#statusbar');
+  let current = null, history = [];
+
+  const STATUS = {
+    rec:{cls:'s-rec',txt:'Received'}, open:{cls:'s-open',txt:'Awaiting inspection'},
+    prog:{cls:'s-prog',txt:'Repair scheduled'}, done:{cls:'s-done',txt:'Fixed'}
+  };
+  const reports = {
+    r1:{addr:'1120 Elm Ave',sub:'Large · Driving lane',ticket:'#PH-24533',status:'prog',art:'pothole2',votes:7,mine:true,date:'Sep 30',
+        steps:[['Received','Sep 30, 8:12 AM','',1],['Inspected','Oct 2','Depth about 4 in. Marked priority 2.',1],['Repair scheduled','Thu, Oct 8','Crew 4 assigned, morning shift.',2],['Fixed','','',0]]},
+    r2:{addr:'Main St & River Rd',sub:'Medium · Crosswalk',ticket:'#PH-24790',status:'open',art:'pothole3',votes:5,mine:true,date:'Oct 3',
+        steps:[['Received','Oct 3, 5:40 PM','',1],['Inspected','','Typically within 2 business days.',2],['Repair scheduled','','',0],['Fixed','','',0]]},
+    r3:{addr:'Lincoln Park entrance',sub:'Small · Parking lane',ticket:'#PH-23901',status:'done',art:'patched',votes:3,mine:true,date:'Sep 18',
+        steps:[['Received','Sep 18','',1],['Inspected','Sep 22','',1],['Repair scheduled','Sep 26','',1],['Fixed','Sep 28','Cold patch applied. Permanent fill in spring.',1]]},
+    r4:{addr:'88 River Rd',sub:'Medium · Shoulder',ticket:'#PH-24702',status:'open',art:'pothole',votes:2,mine:false,date:'Oct 1',
+        steps:[['Received','Oct 1','',1],['Inspected','','',2],['Repair scheduled','','',0],['Fixed','','',0]]},
+    r5:{addr:'300 Main St',sub:'Large · Bike lane',ticket:'#PH-24611',status:'prog',art:'pothole2',votes:11,mine:true,date:'Sep 27',
+        steps:[['Received','Sep 27','',1],['Inspected','Sep 29','Hazard to cyclists. Priority 1.',1],['Repair scheduled','Tue, Oct 6','',2],['Fixed','','',0]]}
+  };
+  const draft = {photos:0,size:'Medium',where:'Driving lane',haz:[],notes:'',addr:'418 Maple St'};
+  let detailId = 'r1', voted = {};
+
+  function go(name, opts={}){
+    const next = $(`.screen[data-screen="${name}"]`);
+    if(!next) return;
+    if(current && !opts.back) history.push(current.dataset.screen);
+    $$('.screen').forEach(s=>s.classList.remove('active'));
+    next.classList.add('active');
+    next.querySelectorAll('.scroll').forEach(s=>s.scrollTop=0);
+    current = next;
+    statusbar.classList.toggle('light', ['welcome','submitted'].includes(name));
+    if(name==='review') fillReview();
+    if(name==='my-reports') renderList();
+    if(name==='report-detail') renderDetail();
+    if(name==='locate') $('#dupBox').classList.remove('show');
+  }
+
+  function toast(msg){
+    const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+    clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1600);
+  }
+
+  document.addEventListener('click', e=>{
+    const g = e.target.closest('[data-go]');
+    if(g && !g.disabled){ go(g.dataset.go); return; }
+    const d = e.target.closest('[data-detail]');
+    if(d){ detailId=d.dataset.detail; go('report-detail'); return; }
+    const tt = e.target.closest('[data-toast]');
+    if(tt){ toast(tt.dataset.toast); }
+  });
+
+  $('#detailBack').addEventListener('click', ()=>{ go(history.pop()||'home',{back:true}); });
+
+  // Locate: simulate dragging map and address lookup
+  const addrs=[['418 Maple St','Near Main St intersection · Ward 3',false],['Main St & River Rd','Intersection · Ward 3',true],['1207 Elm Ave','Between Main St and 3rd St · Ward 2',false]];
+  let ai=0;
+  $('#nudge').addEventListener('click',()=>{
+    ai=(ai+1)%addrs.length;
+    const [a,s,dup]=addrs[ai];
+    $('#locBase').style.transform=`translate(${(ai%2?-30:25)}px,${ai*-20}px)`;
+    $('#addrLine').textContent=a; $('#addrSub').textContent=s; draft.addr=a;
+    $('#dupBox').classList.toggle('show',dup);
+  });
+  $('#gps').addEventListener('click',()=>{
+    ai=0; $('#locBase').style.transform='none';
+    $('#addrLine').textContent=addrs[0][0]; $('#addrSub').textContent=addrs[0][1]; draft.addr=addrs[0][0];
+    $('#dupBox').classList.remove('show'); toast('Using your current location');
+  });
+
+  // Photo capture
+  function renderThumbs(){
+    const wrap=$('#thumbs'); wrap.innerHTML='';
+    for(let i=0;i<draft.photos;i++){
+      const d=document.createElement('div'); d.className='thumb';
+      d.innerHTML=`<svg viewBox="0 0 300 300"><use href="#${i%2?'pothole3':'pothole'}"/></svg><button aria-label="Remove">&times;</button>`;
+      d.querySelector('button').onclick=()=>{draft.photos--;renderThumbs();};
+      wrap.appendChild(d);
+    }
+    for(let i=draft.photos;i<3;i++){const e=document.createElement('div');e.className='thumb empty';wrap.appendChild(e);}
+    $('#photoNext').disabled = draft.photos===0;
+    $('#camTip').textContent = draft.photos? `${draft.photos} of 3 photos. Add a wide shot too.` : 'Include a shoe or cone for scale';
+  }
+  $('#shutter').addEventListener('click',()=>{
+    if(draft.photos>=3){toast('Maximum 3 photos');return;}
+    const f=$('#flash'); f.classList.remove('flash'); void f.offsetWidth; f.classList.add('flash');
+    draft.photos++; renderThumbs();
+  });
+  renderThumbs();
+
+  // Details
+  $$('#sizeSeg button').forEach(b=>b.addEventListener('click',()=>{
+    $$('#sizeSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); draft.size=b.dataset.size;
+  }));
+  $$('#whereOpts .opt').forEach(b=>b.addEventListener('click',()=>{
+    $$('#whereOpts .opt').forEach(x=>x.classList.remove('on')); b.classList.add('on'); draft.where=b.textContent;
+  }));
+  $$('#hazOpts .opt').forEach(b=>b.addEventListener('click',()=>{
+    b.classList.toggle('on'); draft.haz=$$('#hazOpts .opt.on').map(x=>x.textContent);
+  }));
+  $('#notes').addEventListener('input',e=>draft.notes=e.target.value.trim());
+  $('#notifySwitch').addEventListener('click',e=>e.currentTarget.classList.toggle('on'));
+
+  function fillReview(){
+    $('#rvAddr').textContent=draft.addr; $('#rvSize').textContent=draft.size; $('#rvWhere').textContent=draft.where;
+    $('#rvHaz').textContent=draft.haz.length?draft.haz.join(', '):'None noted';
+    $('#rvNotes').textContent=draft.notes||'None';
+    $('#photoCount').textContent = draft.photos? `${draft.photos} photo${draft.photos>1?'s':''}` : 'No photo';
+    $('#reviewHero').style.display = draft.photos? '' : 'none';
+  }
+
+  let submitted=false, ticketN=24817;
+  $('#submitBtn').addEventListener('click',e=>{
+    const b=e.currentTarget; b.disabled=true; b.textContent='Sending...';
+    setTimeout(()=>{
+      const id='new'+ticketN;
+      reports[id]={addr:draft.addr,sub:`${draft.size} · ${draft.where}`,ticket:'#PH-'+ticketN,status:'rec',art:draft.photos?'pothole':'pothole3',votes:1,mine:true,date:'Today',
+        steps:[['Received','Today, just now','Confirmation sent by text.',2],['Inspected','','Typically within 2 business days.',0],['Repair scheduled','','',0],['Fixed','','',0]]};
+      reports[id]._new=true;
+      $('#ticketNo').textContent='#PH-'+ticketN; $('#ticketAddr').textContent=draft.addr;
+      ticketN++;
+      $('#pfTotal').textContent=Object.values(reports).filter(r=>r.mine).length;
+      b.disabled=false; b.textContent='Submit report';
+      // reset draft
+      draft.photos=0; renderThumbs();
+      history=[]; go('submitted');
+    },700);
+  });
+
+  // List
+  let filter='all';
+  $$('#filters .opt').forEach(b=>b.addEventListener('click',()=>{
+    $$('#filters .opt').forEach(x=>x.classList.remove('on')); b.classList.add('on'); filter=b.dataset.f; renderList();
+  }));
+  function renderList(){
+    const list=$('#reportList'); list.innerHTML='';
+    const items=Object.entries(reports).filter(([k,r])=>r.mine).reverse()
+      .filter(([k,r])=>filter==='all'||(filter==='done'?r.status==='done':r.status!=='done'));
+    if(!items.length){list.innerHTML='<p class="lead" style="text-align:center;padding:40px 0">Nothing here yet.</p>';return;}
+    items.forEach(([k,r])=>{
+      const s=STATUS[r.status];
+      const el=document.createElement('button'); el.className='card item'; el.dataset.detail=k;
+      el.innerHTML=`<div class="th"><svg viewBox="0 0 300 300"><use href="#${r.art}"/></svg></div>
+        <div class="meta"><b>${r.addr}</b><small>${r.sub} · ${r.date}</small><span class="status ${s.cls}"><i></i>${s.txt}</span></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9aa3ab" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>`;
+      list.appendChild(el);
+    });
+  }
+
+  function renderDetail(){
+    const r=reports[detailId]; const s=STATUS[r.status];
+    $('#detailImg').innerHTML=`<use href="#${r.art}" width="390" height="390" y="-80"/>`;
+    $('#dStatus').innerHTML=`<span class="status ${s.cls}"><i></i>${s.txt}</span>`;
+    $('#dTitle').textContent=r.addr;
+    $('#dSub').textContent=`${r.sub} · Ticket ${r.ticket}`;
+    const v=r.votes+(voted[detailId]?1:0);
+    $('#voteCount').textContent=v;
+    const vb=$('#voteBtn');
+    vb.classList.toggle('on',!!voted[detailId]);
+    vb.textContent = r.mine&&!voted[detailId]&&r._new ? 'Your report' : (voted[detailId]?'Confirmed':'I hit this too');
+    vb.disabled = !!(r._new);
+    $('#dTimeline').innerHTML=r.steps.map(([t,d,p,st])=>`<div class="tl ${st===1?'on':st===2?'now':''}"><b>${t}</b>${d?`<small>${d}</small>`:''}${p?`<p>${p}</p>`:''}</div>`).join('');
+  }
+  $('#voteBtn').addEventListener('click',()=>{
+    voted[detailId]=!voted[detailId]; renderDetail();
+    if(voted[detailId]) toast('Thanks. Priority goes up with each confirm.');
+  });
+
+  go('welcome');
+})();
+</script>
+</body>
+</html>
