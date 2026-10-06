@@ -22,6 +22,7 @@ RUNS = {
     "D2": "D2_camera_first.html",
     "D3": "D3_address_first.html",
     "E": "E_scoped_polished.html",
+    "F": "F_scoped_three_fidelities.html",
 }
 RERENDERS = {"B": "A", "B2": "A", "E": "C"}
 

@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Scope Is the Skill Demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap">
 <style>
-/* Layout: a single reading column of lab notes; each run is a specimen with its prompt beside a live phone-sized frame. */
+/* Layout: one reading column; each section pairs a request with what it produced, as wrapping thumbnail sheets. One live prototype, no sideways scrolling. */
 :root {
   --bg: #f3f5f6;
   --surface: #ffffff;
@@ -16,197 +16,241 @@
   --muted: #5a6670;
   --rule: #d5dbe0;
   --accent: #2c56c9;
+  --mark: #dfe8ff;
   --warn: #a8461c;
   --code-bg: #e9edf0;
   --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #14181c; --surface: #1c2227; --ink: #e4e9ed; --muted: #9aa6b0;
-    --rule: #2f3840; --accent: #7c9cf0; --warn: #e48a62; --code-bg: #232a30;
+    --rule: #2f3840; --accent: #7c9cf0; --mark: #263760; --warn: #e48a62; --code-bg: #232a30;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #14181c; --surface: #1c2227; --ink: #e4e9ed; --muted: #9aa6b0;
-  --rule: #2f3840; --accent: #7c9cf0; --warn: #e48a62; --code-bg: #232a30;
+  --rule: #2f3840; --accent: #7c9cf0; --mark: #263760; --warn: #e48a62; --code-bg: #232a30;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.6; padding-inline: 16px; padding-block: 32px 64px; }
-.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 48px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 56px; }
 .prose { max-width: 66ch; }
 h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.15; text-wrap: balance; margin: 0; }
 h1 { font-size: clamp(2rem, 5vw, 2.8rem); }
 h2 { font-size: 1.6rem; }
-h3 { font-size: 1.15rem; }
+h3 { font-size: 1.1rem; }
 p { margin: 0; }
 .stack { display: grid; gap: 14px; }
 .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.meta { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); }
 a { color: var(--accent); }
 a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.table-scroll { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); }
-table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 0.95rem; }
-th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-th { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
-td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+pre { margin: 0; background: var(--code-bg); padding: 14px 16px; font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+mark { background: var(--mark); color: inherit; padding: 1px 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.pair > div { min-width: 0; display: grid; gap: 12px; align-content: start; }
+.sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.sheet.three { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 360px; }
+.sheet a { display: block; border: 1px solid var(--rule); background: #fff; line-height: 0; }
+.sheet img { width: 100%; height: auto; display: block; }
+.count { font-family: var(--display); font-size: 1.35rem; font-weight: 600; }
+.alts { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; }
+.alts > div { min-width: 0; display: grid; gap: 8px; align-content: start; }
+.live { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 28px; align-items: start; }
+.live > div { min-width: 0; }
+.phone { width: 360px; max-width: 100%; display: grid; gap: 8px; }
+.phone iframe { width: 100%; height: 700px; border: 1px solid var(--rule); background: #fff; display: block; }
+.fidgrid { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; max-width: 460px; }
+.fidgrid .lab { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); padding-right: 6px; }
+.fidgrid a { display: block; border: 1px solid var(--rule); background: #fff; line-height: 0; }
+.fidgrid img { width: 100%; height: auto; display: block; }
+.steps { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.steps li { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 12px; }
+.steps b { font-family: var(--mono); font-size: 0.8rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); padding-top: 3px; }
+.caution { border-top: 1px solid var(--rule); padding-top: 24px; }
+.duo { display: grid; grid-template-columns: repeat(2, minmax(0, 150px)); gap: 12px; }
+.duo figure { margin: 0; display: grid; gap: 6px; }
+.duo img { width: 100%; height: auto; border: 1px solid var(--rule); display: block; }
+.duo figcaption { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
 tr:last-child td { border-bottom: 0; }
 .flag { color: var(--warn); font-weight: 600; }
-.specimen { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; border-top: 1px solid var(--rule); padding-top: 24px; }
-.specimen > div { min-width: 0; }
-pre { margin: 0; background: var(--code-bg); padding: 14px 16px; font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
-.phone { width: 300px; max-width: 100%; display: grid; gap: 8px; }
-.phone iframe { width: 300px; max-width: 100%; height: 580px; border: 1px solid var(--rule); background: #ffffff; display: block; }
-.phone a { font-family: var(--mono); font-size: 0.8rem; }
-.row { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px; }
-.row .phone { flex: 0 0 auto; }
-.meta { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); }
-.compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.compare > div { min-width: 0; display: grid; gap: 8px; align-content: start; }
-.compare pre { font-size: 0.78rem; }
 @media (max-width: 760px) {
-  .specimen, .compare { grid-template-columns: 1fr; }
+  .pair, .live { grid-template-columns: 1fr; }
+  .phone { width: 100%; }
+  .phone iframe { height: 640px; }
+  .steps li { grid-template-columns: 1fr; gap: 2px; }
 }
 </style>
-
+</head>
+<body>
 <div class="wrap">
 
 <header class="stack prose">
   <p class="eyebrow">Companion to "Scope Is the Skill" · Human Factors Brief</p>
-  <h1>One pothole app, eight prompts</h1>
-  <p>The overbuilt AI prototype is usually a prompt problem. Asked for an app with no scope, a model fills in a whole product. Given a task, a screen limit, and what is out of scope, it builds the small thing, and its fidelity can then be set by prompt in either direction. The runs below show each step.</p>
-  <p>Each prototype was generated by a general-purpose AI model on October 5, 2026, each in its own session. A, C, and D1–D3 were fresh generations; B and B2 were each given A's file to re-render, and E was given C's file; none saw anything else. The design request in each prompt is shown as sent, with file paths shortened, and the prototypes are unedited. Every prompt, scoped or not, also ended with the same technical block, reproduced in full in prompts.md in the repository: write one self-contained HTML file, tag each screen so screens could be counted, and "Do not ask questions; make your own decisions." Apart from C's rendering instruction, scope was the only difference between the prompts for A and C.</p>
+  <h1>The heap comes from the request</h1>
+  <p>AI prototypes often arrive overbuilt: ask for an app, receive ten screens, spend the afternoon deleting eight. This page shows where that comes from. The same model, asked for the same app, built a whole product when the request had no scope and a single task when it did. With the scope set, it built three approaches in less time than the one overbuilt version, and one prototype that switches between three fidelities.</p>
+  <p class="meta">Every prototype here is unedited AI output, generated October 5 and 6, 2026. Prompts, counts, and the scripts that produced them are in the <a href="https://github.com/jwbrown1969/AI-Prototype_Example">repository</a>.</p>
 </header>
 
 <section class="stack">
-  <h2>What each run produced</h2>
-  <div class="table-scroll">
+  <h2>Same app, two requests</h2>
+  <div class="pair">
+    <div>
+      <p class="eyebrow">Unscoped request</p>
+      <pre>Build a clickable prototype of a mobile web app that lets residents report potholes to their city.</pre>
+      <p><span class="count">11 screens</span> <span class="meta">· 212 s</span></p>
+      <div class="sheet">
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_01_welcome.png" alt="Welcome screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_02_home.png" alt="Home screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_03_locate.png" alt="Locate screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_04_photo.png" alt="Photo screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_05_details.png" alt="Details screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_06_review.png" alt="Review screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_07_submitted.png" alt="Submitted screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_08_my-reports.png" alt="My reports screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_09_report-detail.png" alt="Report detail screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_10_updates.png" alt="Updates screen" loading="lazy"></a>
+        <a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener"><img src="thumbs/A_11_profile.png" alt="Profile screen" loading="lazy"></a>
+      </div>
+      <p>Nobody asked for a welcome flow, a report history, status updates, or a profile. With no scope and an instruction to make its own decisions, the model filled in a whole product.</p>
+    </div>
+    <div>
+      <p class="eyebrow">Scoped request</p>
+      <pre>Build a clickable prototype of a mobile web app that lets residents report potholes to their city.
+
+<mark>Scope: one task only. A resident reports a single pothole: marks its location, optionally adds a photo, and receives a confirmation. Three screens maximum. Out of scope: accounts or sign-in, report history, status tracking, notifications, settings, onboarding, and any other feature.</mark>
+
+Render it as a hand-drawn grayscale wireframe with placeholder text, no color or imagery.</pre>
+      <p><span class="count">3 screens</span> <span class="meta">· 37 s</span></p>
+      <div class="sheet three">
+        <a href="prototypes/C_scoped_sketch.html" target="_blank" rel="noopener"><img src="thumbs/C_01_location.png" alt="Location screen" loading="lazy"></a>
+        <a href="prototypes/C_scoped_sketch.html" target="_blank" rel="noopener"><img src="thumbs/C_02_photo-submit.png" alt="Photo and submit screen" loading="lazy"></a>
+        <a href="prototypes/C_scoped_sketch.html" target="_blank" rel="noopener"><img src="thumbs/C_03_confirmation.png" alt="Confirmation screen" loading="lazy"></a>
+      </div>
+      <p>The highlighted paragraph is the whole difference in scope. It is drawn as a sketch because the request asked for one; the same scope polished is further down.</p>
+    </div>
+  </div>
+  <p class="meta prose">Both requests ended with the same technical block, which included "Do not ask questions; make your own decisions." Apart from the scoped request's rendering line, scope was the only difference.</p>
+</section>
+
+<section class="stack">
+  <h2>The speed, spent on alternatives</h2>
+  <p class="prose">The same scoped request, with one added line naming a starting point, produced three distinct approaches in 144 seconds combined, less than the single unscoped build took. Seeing a design among alternatives draws more candid criticism than seeing it alone, and at this cost there is little reason to show participants only one.</p>
+  <div class="alts">
+    <div>
+      <p class="eyebrow">Map first · 57 s</p>
+      <div class="sheet three">
+        <a href="prototypes/D1_map_first.html" target="_blank" rel="noopener"><img src="thumbs/D1_01_map.png" alt="Map screen" loading="lazy"></a>
+        <a href="prototypes/D1_map_first.html" target="_blank" rel="noopener"><img src="thumbs/D1_02_details.png" alt="Details screen" loading="lazy"></a>
+        <a href="prototypes/D1_map_first.html" target="_blank" rel="noopener"><img src="thumbs/D1_03_confirmation.png" alt="Confirmation screen" loading="lazy"></a>
+      </div>
+    </div>
+    <div>
+      <p class="eyebrow">Camera first · 45 s</p>
+      <div class="sheet three">
+        <a href="prototypes/D2_camera_first.html" target="_blank" rel="noopener"><img src="thumbs/D2_01_capture.png" alt="Capture screen" loading="lazy"></a>
+        <a href="prototypes/D2_camera_first.html" target="_blank" rel="noopener"><img src="thumbs/D2_02_details.png" alt="Details screen" loading="lazy"></a>
+        <a href="prototypes/D2_camera_first.html" target="_blank" rel="noopener"><img src="thumbs/D2_03_done.png" alt="Done screen" loading="lazy"></a>
+      </div>
+    </div>
+    <div>
+      <p class="eyebrow">Address first · 42 s</p>
+      <div class="sheet three">
+        <a href="prototypes/D3_address_first.html" target="_blank" rel="noopener"><img src="thumbs/D3_01_address.png" alt="Address screen" loading="lazy"></a>
+        <a href="prototypes/D3_address_first.html" target="_blank" rel="noopener"><img src="thumbs/D3_02_details.png" alt="Details screen" loading="lazy"></a>
+        <a href="prototypes/D3_address_first.html" target="_blank" rel="noopener"><img src="thumbs/D3_03_confirmation.png" alt="Confirmation screen" loading="lazy"></a>
+      </div>
+    </div>
+  </div>
+  <p class="meta prose">Scope shrank the builds; it did not stop the model from guessing at the edges. The scoped sketch and the map-first and camera-first versions each added an optional note field. Map first also added an address search and a "No account needed" line, and address first added an optional size choice.</p>
+</section>
+
+<section class="stack">
+  <h2>Fidelity is a setting</h2>
+  <div class="live">
+    <div class="stack">
+      <p class="prose">This prototype came from one scoped request that asked for three fidelities in a single build. Use the control at its top to switch between them. All three share one set of screens and one set of words, so a change made to the prototype appears in every fidelity at once.</p>
+      <pre><mark>Fidelity: build the prototype once, with a control that switches the whole prototype between three fidelities. Switching must not change the screens, the flow, or any wording; every fidelity uses the same real copy.</mark>
+1. Sketch: hand-drawn look, wobbly lines, handwriting-style font, grayscale.
+2. Wireframe: crisp gray boxes, system font, consistent grid, one accent color marking what can be tapped.
+3. Polished: finished visual design with color, typography, and icons.</pre>
+      <p class="meta">Added to the same scope paragraph as above. Full prompt in the repository.</p>
+      <ul class="steps">
+        <li><b>Sketch</b><span>Early sessions, while the concept itself is in question. The roughness invites people to argue with the idea.</span></li>
+        <li><b>Wireframe</b><span>Task testing once the flow settles. Real wording in plain boxes, with what can be tapped marked.</span></li>
+        <li><b>Polished</b><span>Late sessions and the stakeholder readout, where visual hierarchy and buy-in are the questions.</span></li>
+      </ul>
+      <p class="prose">That progression follows a rapid iterative testing study, where a team fixes what breaks between participants and raises fidelity as the design stabilizes. Rebuilding used to set the pace of those fixes. Here, moving between fidelities is a click, and a fix lands in all three.</p>
+      <div class="fidgrid" aria-label="The three fidelities, screen by screen">
+        <span class="lab">Sketch</span>
+        <a href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener"><img src="thumbs/F_sketch_01_location.png" alt="Sketch, location screen" loading="lazy"></a>
+        <a href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener"><img src="thumbs/F_sketch_02_photo.png" alt="Sketch, photo screen" loading="lazy"></a>
+        <a href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener"><img src="thumbs/F_sketch_03_confirmation.png" alt="Sketch, confirmation screen" loading="lazy"></a>
+        <span class="lab">Wireframe</span>
+        <a href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener"><img src="thumbs/F_wireframe_01_location.png" alt="Wireframe, location screen" loading="lazy"></a>
+        <a href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener"><img src="thumbs/F_wireframe_02_photo.png" alt="Wireframe, photo screen" loading="lazy"></a>
+        <a href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener"><img src="thumbs/F_wireframe_03_confirmation.png" alt="Wireframe, confirmation screen" loading="lazy"></a>
+        <span class="lab">Polished</span>
+        <a href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener"><img src="thumbs/F_polished_01_location.png" alt="Polished, location screen" loading="lazy"></a>
+        <a href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener"><img src="thumbs/F_polished_02_photo.png" alt="Polished, photo screen" loading="lazy"></a>
+        <a href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener"><img src="thumbs/F_polished_03_confirmation.png" alt="Polished, confirmation screen" loading="lazy"></a>
+      </div>
+      <p class="meta prose">Its unrequested additions: street labels on the map and a line of helper text on the photo step. A separate run redrew the scoped sketch above as a <a href="prototypes/E_scoped_polished.html" target="_blank" rel="noopener">polished interface</a> and kept every word, so fidelity also moves upward between separate builds.</p>
+    </div>
+    <div class="phone">
+      <iframe src="prototypes/F_scoped_three_fidelities.html" title="Scoped prototype with a sketch, wireframe, and polished switch"></iframe>
+      <a class="meta" href="prototypes/F_scoped_three_fidelities.html" target="_blank" rel="noopener">Open full size</a>
+    </div>
+  </div>
+</section>
+
+<section class="stack caution">
+  <h2>When the wording is loose</h2>
+  <p class="prose">Fidelity changes cleanly only when the request says what must stay. Asked to redraw the unscoped prototype as a sketch "with placeholder text," the model kept every screen and 4 percent of the words. The questions on the details screen, how big the pothole is, where it sits, and whether it is a hazard, became Label A, Label B, and Label C. Asked for the same style while keeping every label and line of copy, it kept all of it. Building fidelity as a view of one prototype, as above, avoids the problem entirely.</p>
+  <div class="duo">
+    <figure><img src="thumbs/A_05_details.png" alt="Original details screen with its questions" loading="lazy"><figcaption>Original</figcaption></figure>
+    <figure><img src="thumbs/B_05_details.png" alt="Sketch redraw with questions replaced by placeholder labels" loading="lazy"><figcaption>"Placeholder text"</figcaption></figure>
+  </div>
+</section>
+
+<section class="stack">
+  <h2>Every run</h2>
+  <div class="table-wrap">
     <table>
-      <thead><tr><th>Run</th><th>What the prompt asked for</th><th>Screens</th><th>Original copy kept</th><th>Time</th></tr></thead>
+      <thead><tr><th>Run</th><th>Request</th><th>Screens</th><th>Copy kept</th><th>Time</th></tr></thead>
       <tbody>
-        <tr><td>A</td><td>The app, no scope, no style</td><td class="num">11</td><td class="num">n/a</td><td class="num">212 s</td></tr>
-        <tr><td>C</td><td>Scoped to one task, three screens maximum, sketch</td><td class="num">3</td><td class="num">n/a</td><td class="num">37 s</td></tr>
-        <tr><td>D1–D3</td><td>Same scope, three different starting points, sketch</td><td class="num">3 each</td><td class="num">n/a</td><td class="num">57, 45, 42 s</td></tr>
-        <tr><td>E</td><td>C re-rendered as a polished interface, keeping every label and line of copy</td><td class="num">3</td><td class="num">100%</td><td class="num">105 s</td></tr>
-        <tr><td>B</td><td>A re-rendered as a sketch "with placeholder text"</td><td class="num">11</td><td class="num flag">4%</td><td class="num">95 s</td></tr>
-        <tr><td>B2</td><td>A re-rendered as a sketch, keeping every label and line of copy</td><td class="num">11</td><td class="num">100%</td><td class="num">173 s</td></tr>
+        <tr><td>A</td><td><a href="prototypes/A_unscoped_polished.html">Unscoped</a></td><td class="num">11</td><td class="num">n/a</td><td class="num">212 s</td></tr>
+        <tr><td>C</td><td><a href="prototypes/C_scoped_sketch.html">Scoped, sketch</a></td><td class="num">3</td><td class="num">n/a</td><td class="num">37 s</td></tr>
+        <tr><td>D1–D3</td><td>Scoped, three starting points: <a href="prototypes/D1_map_first.html">map</a>, <a href="prototypes/D2_camera_first.html">camera</a>, <a href="prototypes/D3_address_first.html">address</a></td><td class="num">3 each</td><td class="num">n/a</td><td class="num">57, 45, 42 s</td></tr>
+        <tr><td>E</td><td><a href="prototypes/E_scoped_polished.html">C redrawn as polished, keeping copy</a></td><td class="num">3</td><td class="num">100%</td><td class="num">105 s</td></tr>
+        <tr><td>F</td><td><a href="prototypes/F_scoped_three_fidelities.html">Scoped, three fidelities in one build</a></td><td class="num">3</td><td class="num">n/a</td><td class="num">151 s</td></tr>
+        <tr><td>B</td><td><a href="prototypes/B_unscoped_sketch.html">A redrawn as sketch, "placeholder text"</a></td><td class="num">11</td><td class="num flag">4%</td><td class="num">95 s</td></tr>
+        <tr><td>B2</td><td><a href="prototypes/B2_unscoped_sketch_copy_kept.html">A redrawn as sketch, keeping copy</a></td><td class="num">11</td><td class="num">100%</td><td class="num">173 s</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="meta prose">Screens: section elements carrying a data-screen attribute. Copy kept: the share of distinct words (three letters or longer) on each screen of the source prototype that also appear on the same screen of the re-render, pooled across screens. Time: wall-clock duration of each generation session. All counts come from count.py in the repository.</p>
-</section>
-
-<section class="stack">
-  <h2>A · The unscoped request</h2>
-  <div class="specimen">
-    <div class="stack">
-      <pre>Build a clickable prototype of a mobile web app that lets residents report potholes to their city.</pre>
-      <p>Nothing asked for accounts, report history, status updates, or a profile. Told to make its own decisions and given no scope, the model supplied all of them: welcome, home, locate, photo, details, review, submitted, my reports, report detail, updates, and profile.</p>
-    </div>
-    <div class="phone"><iframe src="prototypes/A_unscoped_polished.html" title="Prototype A, unscoped and polished" loading="lazy"></iframe><a href="prototypes/A_unscoped_polished.html" target="_blank" rel="noopener">Open A full size</a></div>
-  </div>
-</section>
-
-<section class="stack">
-  <h2>C · Scope stated before style</h2>
-  <div class="specimen">
-    <div class="stack">
-      <pre>Build a clickable prototype of a mobile web app that lets residents report potholes to their city.
-
-Scope: one task only. A resident reports a single pothole: marks its location, optionally adds a photo, and receives a confirmation. Three screens maximum. Out of scope: accounts or sign-in, report history, status tracking, notifications, settings, onboarding, and any other feature.
-
-Render it as a hand-drawn grayscale wireframe with placeholder text, no color or imagery.</pre>
-      <p>Three screens: location, photo and submit, confirmation. The task copy survived ("Tap the map where the pothole is"), with placeholders only around it.</p>
-    </div>
-    <div class="phone"><iframe src="prototypes/C_scoped_sketch.html" title="Prototype C, scoped sketch" loading="lazy"></iframe><a href="prototypes/C_scoped_sketch.html" target="_blank" rel="noopener">Open C full size</a></div>
-  </div>
-</section>
-
-<section class="stack">
-  <h2>D1–D3 · Three alternatives for the price of one</h2>
-  <p class="prose">The same scoped prompt as C, each with one added line naming a different starting point. Showing participants three alternatives rather than one is the move the research supports for getting candid criticism; at this cost there is little reason not to.</p>
-  <pre>Design approach: map-first. The resident starts by placing the pothole on a map.
-Design approach: camera-first. The resident starts by taking a photo, and location comes from the photo or the device.
-Design approach: address-first. The resident starts by typing or confirming a street address or nearest intersection.</pre>
-  <div class="row">
-    <div class="phone"><iframe src="prototypes/D1_map_first.html" title="Alternative D1, map first" loading="lazy"></iframe><a href="prototypes/D1_map_first.html" target="_blank" rel="noopener">Open D1 · map first</a></div>
-    <div class="phone"><iframe src="prototypes/D2_camera_first.html" title="Alternative D2, camera first" loading="lazy"></iframe><a href="prototypes/D2_camera_first.html" target="_blank" rel="noopener">Open D2 · camera first</a></div>
-    <div class="phone"><iframe src="prototypes/D3_address_first.html" title="Alternative D3, address first" loading="lazy"></iframe><a href="prototypes/D3_address_first.html" target="_blank" rel="noopener">Open D3 · address first</a></div>
-  </div>
-  <p class="meta prose">Scope narrowed the builds without ending the habit of adding. C, D1, and D2 each added an optional note field; D1 added an address search and "No account needed"; D3 added an optional rough-size choice. All stayed within the stated task, but none were asked for.</p>
-</section>
-
-<section class="stack">
-  <h2>E · The scoped sketch, polished</h2>
-  <div class="specimen">
-    <div class="stack">
-      <pre>Re-render the prototype in C_scoped_sketch.html as a polished, finished-looking mobile interface with real visual design: color, typography, and icons. Keep every screen, label, question, option, and line of copy exactly as it appears in the original.</pre>
-      <p>The same three screens with every word of C's copy, now in finished visual design. The only addition was cosmetic: street labels and zoom buttons on the map. Fidelity moved up as easily as B and B2 moved it down.</p>
-    </div>
-    <div class="phone"><iframe src="prototypes/E_scoped_polished.html" title="Prototype E, scoped and polished" loading="lazy"></iframe><a href="prototypes/E_scoped_polished.html" target="_blank" rel="noopener">Open E full size</a></div>
-  </div>
-</section>
-
-<section class="stack">
-  <h2>B and B2 · When the wording is loose</h2>
-  <p class="prose">Moving fidelity down works too, but the request has to say what stays. Both re-renders of the unscoped app kept all eleven screens. B asked for "placeholder text" and lost nearly all of its copy; B2 asked to keep every label and line of copy and kept all of it.</p>
-  <div class="specimen">
-    <div class="stack">
-      <h3>B</h3>
-      <pre>Re-render the prototype in A_unscoped_polished.html as a hand-drawn grayscale wireframe with placeholder text, no color or imagery.</pre>
-    </div>
-    <div class="phone"><iframe src="prototypes/B_unscoped_sketch.html" title="Prototype B, sketch with placeholder text" loading="lazy"></iframe><a href="prototypes/B_unscoped_sketch.html" target="_blank" rel="noopener">Open B full size</a></div>
-  </div>
-  <div class="specimen">
-    <div class="stack">
-      <h3>B2</h3>
-      <pre>Re-render the prototype in A_unscoped_polished.html as a hand-drawn grayscale wireframe, no color or imagery. Keep every screen, label, question, option, and line of copy exactly as it appears in the original.</pre>
-    </div>
-    <div class="phone"><iframe src="prototypes/B2_unscoped_sketch_copy_kept.html" title="Prototype B2, sketch with copy kept" loading="lazy"></iframe><a href="prototypes/B2_unscoped_sketch_copy_kept.html" target="_blank" rel="noopener">Open B2 full size</a></div>
-  </div>
-
-  <h3>The details screen, three ways</h3>
-  <div class="compare">
-    <div><p class="eyebrow">A · original</p><pre>How big is it?
-  Small (Fist) · Medium (Dinner plate)
-  Large (Tire or bigger)
-Where on the road?
-  Driving lane · Bike lane · Crosswalk
-  Shoulder · Parking lane
-Any hazards?
-  Cars swerving · Water filled
-  Damaged my car · Near a school
-Notes for the crew (optional)
-Notify me of updates</pre></div>
-    <div><p class="eyebrow">B · placeholder text</p><pre>Label A
-Label B
-  xxxx xxxx xxxx xxxx xxxx
-Label C
-  xxxx xxxx xxxx xxxx
-Label D (optional)
-[ Next ]</pre></div>
-    <div><p class="eyebrow">B2 · copy kept</p><pre>How big is it?
-  Small (Fist) · Medium (Dinner plate)
-  Large (Tire or bigger)
-Where on the road?
-  Driving lane · Bike lane · Crosswalk
-  Shoulder · Parking lane
-Any hazards?
-  Cars swerving · Water filled
-  Damaged my car · Near a school
-Notes for the crew (optional)
-Notify me of updates</pre></div>
-  </div>
-  <p class="prose">In B, a participant cannot judge whether the form asks the right questions, because the questions are gone. C used the same phrase, "placeholder text," and kept its task wording, while D2 filled its body text with lorem ipsum: the phrase does not reliably mean one thing.</p>
+  <p class="meta prose">Screens are counted from the prototype files by count.py. Copy kept is the share of distinct words on each screen of the source that also appear on the same screen of the redraw. Time is the wall-clock length of each generation session. Thumbnails were rendered from the files by render_thumbs.py.</p>
 </section>
 
 <section class="stack prose">
   <h2>Limits</h2>
-  <p>This is one flow, one model, one run per prompt. Another run of the same prompt could produce a different screen count or keep more or less copy. The demonstration shows that scope in the prompt controls the size of the build and that fidelity can be set by prompt in both directions, provided the request says what must stay. It does not show what participants would say about any of these versions, and it cannot show the project knowledge a real scope comes from.</p>
+  <p>This is one flow, one model, and one run per request; another run could return a different screen count or keep more or less copy. The demonstration shows that the scope in a request set the size of the build and that fidelity can be set by request. It does not show what participants would say about any version.</p>
+  <p>It also cannot show the half of the skill that matters most. The scope above is a reasonable assumption about what a pothole report needs, not the product of field research. In real work, that paragraph comes from knowing the people, the task, and the organization, and a scope is only as good as the understanding behind it.</p>
 </section>
 
-</div>
+<footer class="meta">Opinions are my own and do not represent my employer.</footer>
 
+</div>
+</body>
 </html>

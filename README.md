@@ -1,10 +1,10 @@
-# AI Prototype Example: one pothole app, eight prompts
+# AI Prototype Example: one pothole app, nine prompts
 
 Companion demonstration for the Human Factors Brief article "Scope Is the Skill."
 
-The argument it supports: overdesign in AI prototyping follows the prompt. Given no scope, a model fills in a full product; given a stated task, a screen limit, and what is out of scope, it builds the small thing. Fidelity can then be set by prompt in either direction.
+The argument it supports: overdesign in AI prototyping follows the prompt. Given no scope, a model fills in a full product; given a stated task, a screen limit, and what is out of scope, it builds the small thing. Fidelity can then be set by prompt in either direction, including as a switch inside a single build.
 
-Open `index.html` for the guided page. Each prototype in `prototypes/` was generated on October 5, 2026 by a general-purpose AI model, each in its own session. Runs A, C, and D1–D3 were fresh generations. B and B2 were each given A's file to re-render, and E was given C's file to re-render; none saw anything else. The prototypes are unedited. Exact prompts, including the technical block every prompt shared, are in `prompts.md`.
+Open `index.html` for the guided page. Each prototype in `prototypes/` was generated on October 5 and 6, 2026 by a general-purpose AI model, each in its own session. Runs A, C, D1–D3, and F were fresh generations. B and B2 were each given A's file to re-render, and E was given C's file to re-render; none saw anything else. The prototypes are unedited. Exact prompts, including the technical block every prompt shared, are in `prompts.md`.
 
 ## Results
 
@@ -16,14 +16,19 @@ Open `index.html` for the guided page. Each prototype in `prototypes/` was gener
 | C | Scoped to one task, three screens maximum, sketch | 3 | n/a | 37 s |
 | D1–D3 | Same scope, three different starting points, sketch | 3 each | n/a | 57 s, 45 s, 42 s |
 | E | C re-rendered as a polished interface, keeping every label and line of copy | 3 | 100% | 105 s |
+| F | Scoped, with sketch, wireframe, and polished switchable in one build | 3 | n/a | 151 s |
 
 Every prompt, scoped or not, ended with the same technical block, which includes "Do not ask questions; make your own decisions." Apart from C's rendering instruction (a hand-drawn grayscale wireframe), scope was the only difference between the prompts for A and C.
 
-Unrequested additions in the scoped builds: C, D1, and D2 each added an optional note field; D1 added an address search and "No account needed"; D3 added an optional rough-size choice; E added street labels and zoom buttons to the map. Placeholder text varied: D2 filled its body copy with lorem ipsum, and C and E use it in the note field's placeholder.
+Unrequested additions in the scoped builds: C, D1, and D2 each added an optional note field; D1 added an address search and "No account needed"; D3 added an optional rough-size choice; E added street labels and zoom buttons to the map; F added street labels to the map and a line of helper text on the photo step. Placeholder text varied: D2 filled its body copy with lorem ipsum, and C and E use it in the note field's placeholder.
+
+F's three fidelities share one set of screens and one set of words: the switch changes a single style attribute on the page, so changing fidelity cannot change content.
 
 ## Reproducing the counts
 
 `python3 count.py` (requires `beautifulsoup4`). Screens are the `<section>` elements carrying a `data-screen` attribute, whatever other classes they have. "Copy kept" is the share of distinct words (three letters or longer) on each screen of the source prototype that also appear on the same-named screen of the re-render, pooled across all screens. Generation time is the wall-clock duration of each generation session, including the model writing the file.
+
+`python3 render_thumbs.py` (requires `playwright` and `Pillow`) renders the screen thumbnails in `thumbs/` from the prototype files, without modifying them. For F, it presses the prototype's own fidelity buttons.
 
 ## Limits
 

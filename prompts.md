@@ -35,3 +35,14 @@ The C prompt, with one line added before the render instruction:
 ## E: scoped sketch re-rendered as polished
 
 Re-render the prototype in prototypes/C_scoped_sketch.html as a polished, finished-looking mobile interface with real visual design: color, typography, and icons. Keep every screen, label, question, option, and line of copy exactly as it appears in the original.
+
+## F: scoped, three fidelities in one build (generated October 6, 2026)
+
+Build a clickable prototype of a mobile web app that lets residents report potholes to their city.
+
+Scope: one task only. A resident reports a single pothole: marks its location, optionally adds a photo, and receives a confirmation. Three screens maximum. Out of scope: accounts or sign-in, report history, status tracking, notifications, settings, onboarding, and any other feature.
+
+Fidelity: build the prototype once, with a control that switches the whole prototype between three fidelities. Switching must not change the screens, the flow, or any wording; every fidelity uses the same real copy.
+1. Sketch: hand-drawn look, wobbly lines, handwriting-style font, grayscale.
+2. Wireframe: crisp gray boxes, system font, consistent grid, one accent color marking what can be tapped.
+3. Polished: finished visual design with color, typography, and icons.

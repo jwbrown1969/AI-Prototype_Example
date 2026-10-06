@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en" data-fi="wireframe">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pothole Report Prototype</title>
+<style>
+/* ---------- Fidelity tokens ---------- */
+:root{
+  --font: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --page:#e9e9e9; --screen:#f4f4f4; --surface:#fff; --ink:#222; --muted:#666;
+  --line:#bdbdbd; --tap:#1a6fe0; --tap-ink:#fff; --tap-soft:#e6efff;
+  --radius:4px; --gap:16px; --shadow:none; --border-w:1px;
+}
+html[data-fi="sketch"]{
+  --font:"Segoe Print","Bradley Hand","Chalkboard SE","Comic Sans MS","Comic Neue",cursive;
+  --page:#dcdcdc; --screen:#fbfbf8; --surface:#fbfbf8; --ink:#1e1e1e; --muted:#555;
+  --line:#2a2a2a; --tap:#1e1e1e; --tap-ink:#1e1e1e; --tap-soft:#ececec;
+  --radius:10px 4px 12px 5px; --border-w:2px;
+}
+html[data-fi="polished"]{
+  --page:#d9e4e8; --screen:#f6f8f9; --surface:#fff; --ink:#14232b; --muted:#5b6b73;
+  --line:#dce3e6; --tap:#0b6e7f; --tap-ink:#fff; --tap-soft:#e3f2f4;
+  --radius:14px; --shadow:0 1px 2px rgba(10,40,50,.06),0 6px 18px rgba(10,40,50,.08);
+  --warn:#f2911b;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--page);font-family:var(--font);color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+
+/* ---------- Fidelity switcher (prototype chrome, not part of app) ---------- */
+.fi-bar{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;gap:8px;align-items:center;
+  padding:10px 16px;width:100%;justify-content:center;flex-wrap:wrap;background:#1f1f1f;color:#eee;font-size:13px}
+.fi-bar span{opacity:.75}
+.fi-seg{display:inline-flex;border:1px solid #555;border-radius:8px;overflow:hidden}
+.fi-seg button{background:transparent;border:0;color:#ddd;padding:6px 12px;cursor:pointer;font-size:13px}
+.fi-seg button[aria-pressed="true"]{background:#eee;color:#111}
+
+/* ---------- Phone frame ---------- */
+.phone{position:relative;width:100%;flex:1;background:var(--screen);overflow:hidden;display:flex;flex-direction:column}
+@media (min-width:500px){
+  .phone{flex:none;width:390px;height:780px;margin:24px 0;border-radius:36px;border:10px solid #111;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+  html[data-fi="sketch"] .phone{border-color:#333}
+}
+
+/* ---------- Screens ---------- */
+.screen{display:none;flex:1;flex-direction:column;min-height:0}
+.screen.active{display:flex}
+.appbar{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:var(--border-w) solid var(--line);background:var(--surface);min-height:56px}
+.appbar h1{font-size:17px;margin:0;flex:1;font-weight:600}
+.step{font-size:13px;color:var(--muted)}
+.body{flex:1;overflow:auto;padding:var(--gap);display:flex;flex-direction:column;gap:var(--gap)}
+.footer{padding:12px 16px 20px;border-top:var(--border-w) solid var(--line);background:var(--surface);display:flex;flex-direction:column;gap:10px}
+h2{font-size:22px;margin:0;line-height:1.2}
+p{margin:0;line-height:1.45}
+.help{color:var(--muted);font-size:15px}
+
+/* ---------- Tappables ---------- */
+.btn{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 16px;
+  border-radius:var(--radius);border:var(--border-w) solid var(--tap);cursor:pointer;font-size:16px;font-weight:600;width:100%}
+.btn.primary{background:var(--tap);color:var(--tap-ink)}
+.btn.secondary{background:var(--surface);color:var(--tap)}
+.btn:disabled{cursor:not-allowed;opacity:.45}
+.link{background:none;border:0;color:var(--tap);font-weight:600;cursor:pointer;padding:6px 4px;display:inline-flex;align-items:center;gap:4px;font-size:15px}
+
+/* ---------- Map ---------- */
+.map{position:relative;border:var(--border-w) solid var(--line);border-radius:var(--radius);overflow:hidden;
+  height:300px;cursor:crosshair;background:#e2e2e2;flex:none;touch-action:manipulation}
+.map svg.streets{position:absolute;inset:0;width:100%;height:100%}
+.pin{position:absolute;width:36px;height:44px;transform:translate(-50%,-100%);display:none;pointer-events:none}
+.pin.show{display:block}
+.map-hint{position:absolute;left:8px;bottom:8px;font-size:12px;padding:4px 8px;border-radius:var(--radius);background:rgba(255,255,255,.9);color:var(--muted)}
+.readout{display:flex;gap:10px;align-items:center;padding:12px;border:var(--border-w) solid var(--line);border-radius:var(--radius);background:var(--surface);font-size:15px}
+.readout strong{font-weight:600}
+
+/* ---------- Photo ---------- */
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:220px;
+  border:var(--border-w) dashed var(--tap);border-radius:var(--radius);background:var(--tap-soft);color:var(--tap);cursor:pointer;font-weight:600;text-align:center;padding:12px}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.preview{display:none;position:relative;border-radius:var(--radius);overflow:hidden;border:var(--border-w) solid var(--line);height:220px;background:#ccc}
+.preview img{width:100%;height:100%;object-fit:cover;display:block}
+.has-photo .drop{display:none}
+.has-photo .preview{display:block}
+.summary{display:flex;flex-direction:column;gap:8px;padding:12px;border:var(--border-w) solid var(--line);border-radius:var(--radius);background:var(--surface);font-size:15px}
+.row{display:flex;gap:10px;align-items:center}
+
+/* ---------- Done ---------- */
+.done-body{align-items:center;text-align:center;justify-content:center}
+.badge{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:var(--border-w) solid var(--line);background:var(--surface)}
+.ref{font-size:20px;font-weight:700;letter-spacing:.04em}
+.done-body .summary{width:100%;text-align:left}
+
+/* ---------- Icons ---------- */
+.ic{width:22px;height:22px;flex:none;display:inline-flex}
+.ic svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.badge .ic{width:44px;height:44px}
+.drop .ic{width:40px;height:40px}
+
+/* ================= WIREFRAME ================= */
+html[data-fi="wireframe"] .ic svg{visibility:hidden}
+html[data-fi="wireframe"] .ic{background:#cfcfcf;border-radius:2px;position:relative}
+html[data-fi="wireframe"] .ic::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(45deg,transparent 47%,#9a9a9a 47%,#9a9a9a 53%,transparent 53%),linear-gradient(-45deg,transparent 47%,#9a9a9a 47%,#9a9a9a 53%,transparent 53%)}
+html[data-fi="wireframe"] .btn .ic,html[data-fi="wireframe"] .link .ic,html[data-fi="wireframe"] .drop .ic{background:transparent;outline:1px solid currentColor}
+html[data-fi="wireframe"] .btn .ic::after,html[data-fi="wireframe"] .link .ic::after,html[data-fi="wireframe"] .drop .ic::after{opacity:.5;
+  background:linear-gradient(45deg,transparent 47%,currentColor 47%,currentColor 53%,transparent 53%),linear-gradient(-45deg,transparent 47%,currentColor 47%,currentColor 53%,transparent 53%)}
+html[data-fi="wireframe"] .map{background:#dedede}
+html[data-fi="wireframe"] .streets .blk{fill:#cbcbcb}
+html[data-fi="wireframe"] .streets .rd{stroke:#f5f5f5}
+html[data-fi="wireframe"] .streets .park,html[data-fi="wireframe"] .streets .water{fill:#bdbdbd}
+html[data-fi="wireframe"] .streets text{fill:#777;font-family:var(--font)}
+html[data-fi="wireframe"] .pin path{fill:var(--tap)}
+html[data-fi="wireframe"] .pin circle{fill:#fff}
+html[data-fi="wireframe"] .badge .ic{width:40px;height:40px}
+html[data-fi="wireframe"] h2{font-weight:600}
+
+/* ================= SKETCH ================= */
+html[data-fi="sketch"] body{filter:grayscale(1)}
+html[data-fi="sketch"] .appbar,html[data-fi="sketch"] .footer{border:0;position:relative;background:transparent}
+html[data-fi="sketch"] .appbar::after,html[data-fi="sketch"] .footer::before{content:"";position:absolute;left:6px;right:6px;height:0;
+  border-top:2px solid var(--line);filter:url(#wobble)}
+html[data-fi="sketch"] .appbar::after{bottom:0}
+html[data-fi="sketch"] .footer::before{top:0}
+/* wobbly outlines: real border removed, redrawn on a filtered pseudo-element */
+html[data-fi="sketch"] .btn,html[data-fi="sketch"] .readout,html[data-fi="sketch"] .summary,html[data-fi="sketch"] .map,
+html[data-fi="sketch"] .drop,html[data-fi="sketch"] .preview,html[data-fi="sketch"] .badge{border-color:transparent;position:relative;background-clip:padding-box}
+html[data-fi="sketch"] .btn::before,html[data-fi="sketch"] .readout::before,html[data-fi="sketch"] .summary::before,
+html[data-fi="sketch"] .drop::before,html[data-fi="sketch"] .badge::before{content:"";position:absolute;inset:-2px;
+  border:2px solid var(--ink);border-radius:inherit;filter:url(#wobble);pointer-events:none}
+html[data-fi="sketch"] .drop::before{border-style:dashed}
+html[data-fi="sketch"] .btn.primary{background:transparent;color:var(--ink)}
+html[data-fi="sketch"] .btn.primary::after{content:"";position:absolute;inset:3px;border-radius:inherit;pointer-events:none;
+  background:repeating-linear-gradient(-35deg,rgba(0,0,0,.18) 0 2px,transparent 2px 7px);filter:url(#wobble)}
+html[data-fi="sketch"] .btn.primary{border-width:3px}
+html[data-fi="sketch"] .btn.primary::before{border-width:3px}
+html[data-fi="sketch"] .btn.secondary,html[data-fi="sketch"] .readout,html[data-fi="sketch"] .summary,html[data-fi="sketch"] .badge{background:transparent}
+html[data-fi="sketch"] .drop{background:transparent;color:var(--ink)}
+html[data-fi="sketch"] .link{color:var(--ink);text-decoration:underline wavy;text-underline-offset:4px}
+html[data-fi="sketch"] .map{background:#f3f3ef;border:0}
+html[data-fi="sketch"] .map svg.streets{filter:url(#wobble-big)}
+html[data-fi="sketch"] .map::after{content:"";position:absolute;inset:0;border:2px solid var(--ink);border-radius:inherit;filter:url(#wobble);pointer-events:none}
+html[data-fi="sketch"] .streets .blk{fill:none;stroke:#444;stroke-width:1.5}
+html[data-fi="sketch"] .streets .rd{stroke:transparent}
+html[data-fi="sketch"] .streets .park{fill:none;stroke:#444;stroke-width:1.5;stroke-dasharray:4 4}
+html[data-fi="sketch"] .streets .water{fill:url(#hatch);stroke:#444;stroke-width:1.5}
+html[data-fi="sketch"] .streets text{fill:#333;font-family:var(--font)}
+html[data-fi="sketch"] .pin svg{filter:url(#wobble)}
+html[data-fi="sketch"] .pin path{fill:#fff;stroke:#111;stroke-width:2.5}
+html[data-fi="sketch"] .pin circle{fill:#111}
+html[data-fi="sketch"] .map-hint{background:transparent}
+html[data-fi="sketch"] .ic svg{filter:url(#wobble);stroke-width:2.2}
+html[data-fi="sketch"] h2{font-size:24px}
+html[data-fi="sketch"] .preview img{filter:grayscale(1) contrast(1.2)}
+
+/* ================= POLISHED ================= */
+html[data-fi="polished"] .appbar{border-bottom:0;background:var(--tap);color:#fff}
+html[data-fi="polished"] .appbar .step{color:rgba(255,255,255,.8)}
+html[data-fi="polished"] .appbar .link{color:#fff}
+html[data-fi="polished"] .footer{border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(10,40,50,.05)}
+html[data-fi="polished"] h2{font-size:24px;font-weight:750;letter-spacing:-.01em}
+html[data-fi="polished"] .btn{border-radius:12px;transition:transform .08s,box-shadow .15s}
+html[data-fi="polished"] .btn.primary{box-shadow:0 4px 12px rgba(11,110,127,.3)}
+html[data-fi="polished"] .btn:active{transform:scale(.98)}
+html[data-fi="polished"] .readout,html[data-fi="polished"] .summary,html[data-fi="polished"] .map,html[data-fi="polished"] .preview{border-color:transparent;box-shadow:var(--shadow)}
+html[data-fi="polished"] .readout .ic,html[data-fi="polished"] .summary .ic{color:var(--tap)}
+html[data-fi="polished"] .drop{border-width:2px;background:var(--tap-soft)}
+html[data-fi="polished"] .map{background:#eef2ec}
+html[data-fi="polished"] .streets .blk{fill:#e3e8df}
+html[data-fi="polished"] .streets .rd{stroke:#fff}
+html[data-fi="polished"] .streets .park{fill:#cfe6c5}
+html[data-fi="polished"] .streets .water{fill:#bfdde8}
+html[data-fi="polished"] .streets text{fill:#6a7a72}
+html[data-fi="polished"] .pin path{fill:var(--warn);stroke:#fff;stroke-width:2}
+html[data-fi="polished"] .pin circle{fill:#fff}
+html[data-fi="polished"] .pin{filter:drop-shadow(0 3px 3px rgba(0,0,0,.3))}
+html[data-fi="polished"] .badge{background:#e2f4e8;border:0;color:#1f8a4c;box-shadow:0 0 0 10px #f0faf3}
+html[data-fi="polished"] .ref{color:var(--tap)}
+html[data-fi="polished"] .step{font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- SVG filters for the sketch look -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="wobble" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="wobble-big">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="8" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(40)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#666" stroke-width="1"/>
+    </pattern>
+  </defs>
+</svg>
+
+<div class="fi-bar" role="toolbar" aria-label="Prototype fidelity">
+  <span>Fidelity</span>
+  <div class="fi-seg">
+    <button type="button" data-fi="sketch" aria-pressed="false">Sketch</button>
+    <button type="button" data-fi="wireframe" aria-pressed="true">Wireframe</button>
+    <button type="button" data-fi="polished" aria-pressed="false">Polished</button>
+  </div>
+</div>
+
+<main class="phone">
+
+  <!-- ============ SCREEN 1: LOCATION ============ -->
+  <section class="screen active" data-screen="location">
+    <header class="appbar">
+      <h1>Report a pothole</h1>
+      <span class="step">Step 1 of 2</span>
+    </header>
+    <div class="body">
+      <h2>Where is the pothole?</h2>
+      <p class="help">Tap the map to drop a pin on the pothole.</p>
+
+      <div class="map" id="map" role="button" tabindex="0" aria-label="Map. Tap to drop a pin.">
+        <svg class="streets" viewBox="0 0 360 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <rect class="blk" x="8" y="8" width="96" height="76" rx="3"/>
+          <rect class="park" x="128" y="8" width="104" height="76" rx="3"/>
+          <rect class="blk" x="256" y="8" width="96" height="76" rx="3"/>
+          <rect class="blk" x="8" y="108" width="96" height="84" rx="3"/>
+          <rect class="blk" x="128" y="108" width="104" height="84" rx="3"/>
+          <rect class="blk" x="256" y="108" width="96" height="84" rx="3"/>
+          <rect class="blk" x="8" y="216" width="96" height="76" rx="3"/>
+          <rect class="blk" x="128" y="216" width="104" height="76" rx="3"/>
+          <path class="water" d="M256 216 h96 v76 h-96 z"/>
+          <g class="rd" stroke-width="16" fill="none">
+            <line x1="116" y1="0" x2="116" y2="300"/>
+            <line x1="244" y1="0" x2="244" y2="300"/>
+            <line x1="0" y1="96" x2="360" y2="96"/>
+            <line x1="0" y1="204" x2="360" y2="204"/>
+          </g>
+          <g font-size="10" font-weight="600">
+            <text x="120" y="160" transform="rotate(90 120 160)">Elm St</text>
+            <text x="248" y="160" transform="rotate(90 248 160)">Oak St</text>
+            <text x="20" y="100">3rd Ave</text>
+            <text x="20" y="208">4th Ave</text>
+            <text x="150" y="50">Lincoln Park</text>
+          </g>
+        </svg>
+        <div class="pin" id="pin">
+          <svg viewBox="0 0 36 44" width="36" height="44" aria-hidden="true">
+            <path d="M18 42 C18 42 4 26 4 16 a14 14 0 0 1 28 0 C32 26 18 42 18 42 z"/>
+            <circle cx="18" cy="16" r="5"/>
+          </svg>
+        </div>
+        <span class="map-hint">Tap to drop a pin</span>
+      </div>
+
+      <button type="button" class="btn secondary" id="useLoc">
+        <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>
+        Use my current location
+      </button>
+
+      <div class="readout" aria-live="polite">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+        <span><strong>Pin location:</strong> <span class="loc-text">Not set</span></span>
+      </div>
+    </div>
+    <footer class="footer">
+      <button type="button" class="btn primary" id="toPhoto" disabled>Next: add a photo</button>
+    </footer>
+  </section>
+
+  <!-- ============ SCREEN 2: PHOTO ============ -->
+  <section class="screen" data-screen="photo">
+    <header class="appbar">
+      <button type="button" class="link" data-go="location" aria-label="Back">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>Back
+      </button>
+      <h1>Report a pothole</h1>
+      <span class="step">Step 2 of 2</span>
+    </header>
+    <div class="body" id="photoBody">
+      <h2>Add a photo (optional)</h2>
+      <p class="help">A photo helps crews find and size the pothole.</p>
+
+      <label class="drop">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+        Take or choose a photo
+        <input type="file" id="photoInput" accept="image/*" capture="environment">
+      </label>
+      <div class="preview">
+        <img id="photoImg" alt="Your pothole photo">
+      </div>
+      <button type="button" class="link" id="removePhoto" style="display:none;align-self:flex-start">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></span>Remove photo
+      </button>
+
+      <div class="summary">
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+          <span><strong>Location:</strong> <span class="loc-text">Not set</span></span>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">
+      <button type="button" class="btn primary" id="send">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-6z"/></svg></span>
+        Send report
+      </button>
+    </footer>
+  </section>
+
+  <!-- ============ SCREEN 3: CONFIRMATION ============ -->
+  <section class="screen" data-screen="confirmation">
+    <header class="appbar">
+      <h1>Report a pothole</h1>
+    </header>
+    <div class="body done-body">
+      <div class="badge">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      </div>
+      <h2>Report sent</h2>
+      <p class="help">Thanks. The city's street crew will review your report.</p>
+      <p class="help">Reference number</p>
+      <p class="ref" id="refNum">PH-000000</p>
+      <div class="summary">
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+          <span><strong>Location:</strong> <span class="loc-text">Not set</span></span>
+        </div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+          <span><strong>Photo:</strong> <span id="photoStatus">None</span></span>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">
+      <button type="button" class="btn secondary" id="again">Report another pothole</button>
+    </footer>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  var root = document.documentElement;
+
+  /* ---- Fidelity switch ---- */
+  function setFi(fi){
+    root.setAttribute('data-fi', fi);
+    document.querySelectorAll('.fi-seg button').forEach(function(b){
+      b.setAttribute('aria-pressed', String(b.dataset.fi === fi));
+    });
+    try{ localStorage.setItem('pothole-fi', fi); }catch(e){}
+  }
+  document.querySelectorAll('.fi-seg button').forEach(function(b){
+    b.addEventListener('click', function(){ setFi(b.dataset.fi); });
+  });
+  try{ var saved = localStorage.getItem('pothole-fi'); if(saved) setFi(saved); }catch(e){}
+
+  /* ---- Navigation ---- */
+  function go(name){
+    document.querySelectorAll('.screen').forEach(function(s){
+      s.classList.toggle('active', s.dataset.screen === name);
+    });
+  }
+  document.querySelectorAll('[data-go]').forEach(function(b){
+    b.addEventListener('click', function(){ go(b.dataset.go); });
+  });
+
+  /* ---- State ---- */
+  var state = { loc:null, photo:null };
+  var map = document.getElementById('map'), pin = document.getElementById('pin');
+  var toPhoto = document.getElementById('toPhoto');
+
+  function locName(fx, fy){
+    // fx, fy are 0..1 within the map. Name nearest intersection on the fake grid.
+    var ns = fx < 0.5 ? 'Elm St' : 'Oak St';
+    var ew = fy < 0.5 ? '3rd Ave' : '4th Ave';
+    return 'Near ' + ns + ' & ' + ew;
+  }
+  function placePin(fx, fy){
+    pin.style.left = (fx*100) + '%';
+    pin.style.top = (fy*100) + '%';
+    pin.classList.add('show');
+    state.loc = locName(fx, fy);
+    document.querySelectorAll('.loc-text').forEach(function(el){ el.textContent = state.loc; });
+    toPhoto.disabled = false;
+  }
+  map.addEventListener('click', function(e){
+    var r = map.getBoundingClientRect();
+    placePin((e.clientX - r.left)/r.width, (e.clientY - r.top)/r.height);
+  });
+  map.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); placePin(0.5, 0.5); }
+  });
+  document.getElementById('useLoc').addEventListener('click', function(){ placePin(0.36, 0.40); });
+  toPhoto.addEventListener('click', function(){ if(state.loc) go('photo'); });
+
+  /* ---- Photo ---- */
+  var input = document.getElementById('photoInput'), img = document.getElementById('photoImg');
+  var body = document.getElementById('photoBody'), removeBtn = document.getElementById('removePhoto');
+  input.addEventListener('change', function(){
+    var f = input.files && input.files[0];
+    if(!f) return;
+    if(state.photo) URL.revokeObjectURL(state.photo);
+    state.photo = URL.createObjectURL(f);
+    img.src = state.photo;
+    body.classList.add('has-photo');
+    removeBtn.style.display = 'inline-flex';
+  });
+  function clearPhoto(){
+    if(state.photo) URL.revokeObjectURL(state.photo);
+    state.photo = null; img.removeAttribute('src'); input.value = '';
+    body.classList.remove('has-photo'); removeBtn.style.display = 'none';
+  }
+  removeBtn.addEventListener('click', clearPhoto);
+
+  /* ---- Send ---- */
+  document.getElementById('send').addEventListener('click', function(){
+    document.getElementById('refNum').textContent = 'PH-' + String(Math.floor(100000 + Math.random()*900000));
+    document.getElementById('photoStatus').textContent = state.photo ? 'Attached' : 'None';
+    go('confirmation');
+  });
+
+  /* ---- Reset ---- */
+  document.getElementById('again').addEventListener('click', function(){
+    clearPhoto();
+    state.loc = null; pin.classList.remove('show'); toPhoto.disabled = true;
+    document.querySelectorAll('.loc-text').forEach(function(el){ el.textContent = 'Not set'; });
+    go('location');
+  });
+})();
+</script>
+</body>
+</html>
