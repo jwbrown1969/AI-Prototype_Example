@@ -46,3 +46,16 @@ Fidelity: build the prototype once, with a control that switches the whole proto
 1. Sketch: hand-drawn look, wobbly lines, handwriting-style font, grayscale.
 2. Wireframe: crisp gray boxes, system font, consistent grid, one accent color marking what can be tapped.
 3. Polished: finished visual design with color, typography, and icons.
+
+## Follow-up rounds (generated October 6, 2026)
+
+Each round ran in a fresh session given only the original request, the current prototype file, and one follow-up message, framed as: "You are continuing a prototyping conversation. The user's original request was: [original request]. The current prototype is the file [path]. The user's next message is: [follow-up]. Respond by producing the updated prototype." Each ended with the same technical block as above.
+
+- Unscoped arm: original request is prompt A; starts from A_unscoped_polished.html; produces U1, U2, U3.
+- Scoped arm: original request is prompt C without its rendering line (the build prompt plus the scope paragraph); starts from E_scoped_polished.html; produces S1, S2, S3.
+
+Follow-ups, in order, identical for both arms:
+
+1. This is good. Make it better.
+2. What else would residents want from an app like this? Add it.
+3. Make it production-ready.

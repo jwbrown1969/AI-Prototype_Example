@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f5c63" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1216" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Report a pothole to the city in under a minute.">
+<title>Report a Pothole</title>
+<style>
+  :root{
+    --bg:#e9ecef;--surface:#ffffff;--surface-2:#f4f6f8;--ink:#14212b;--ink-2:#4a5a67;--ink-3:#6b7a86;
+    --line:#dde3e8;--brand:#0f5c63;--brand-2:#13808a;--brand-soft:#e3f2f2;--accent:#c97f00;--accent-soft:#fff4dc;
+    --ok:#1a8a56;--ok-soft:#e2f5ec;--warn:#a34006;--warn-soft:#fef0e6;--danger:#b42d1b;--danger-soft:#fdecea;
+    --road:#ffffff;--road-edge:#d3dad0;--block:#e7ece4;--park:#cfe6c8;--water:#cfe3f0;--label:#5f6e7a;
+    --shadow:0 20px 50px rgba(20,33,43,.14),0 4px 12px rgba(20,33,43,.06);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c1216;--surface:#151e24;--surface-2:#1c272e;--ink:#eef3f6;--ink-2:#a9b8c3;--ink-3:#8a9caa;
+      --line:#2a3740;--brand:#3fb5bd;--brand-2:#5fcad1;--brand-soft:#16343a;--accent:#f5b53a;--accent-soft:#3a2f17;
+      --ok:#3cc488;--ok-soft:#173528;--warn:#f0a35e;--warn-soft:#3a2716;--danger:#ff7b6b;--danger-soft:#3d1c18;
+      --road:#3a4a55;--road-edge:#2a3740;--block:#1f2a31;--park:#21382a;--water:#1b3346;--label:#a3b3bf;
+      --shadow:0 20px 50px rgba(0,0,0,.5),0 4px 12px rgba(0,0,0,.3);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1216;--surface:#151e24;--surface-2:#1c272e;--ink:#eef3f6;--ink-2:#a9b8c3;--ink-3:#8a9caa;
+    --line:#2a3740;--brand:#3fb5bd;--brand-2:#5fcad1;--brand-soft:#16343a;--accent:#f5b53a;--accent-soft:#3a2f17;
+    --ok:#3cc488;--ok-soft:#173528;--warn:#f0a35e;--warn-soft:#3a2716;--danger:#ff7b6b;--danger-soft:#3d1c18;
+    --road:#3a4a55;--road-edge:#2a3740;--block:#1f2a31;--park:#21382a;--water:#1b3346;--label:#a3b3bf;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100dvh;line-height:1.4}
+  button{font:inherit;color:inherit}
+  button,a,input,textarea,[tabindex]{-webkit-tap-highlight-color:transparent}
+  :focus{outline:none}
+  :focus-visible{outline:3px solid var(--brand-2);outline-offset:2px}
+  [hidden]{display:none!important}
+  .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:-1px;padding:0;border:0}
+  .skip{position:absolute;left:12px;top:-60px;background:var(--brand);color:#fff;padding:10px 14px;border-radius:10px;z-index:20;font-weight:650;text-decoration:none}
+  .skip:focus{top:12px}
+
+  /* App shell: real responsive layout, no faux device chrome */
+  .app{width:100%;max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--surface);display:flex;flex-direction:column;position:relative}
+  @media (min-width:560px){
+    body{padding:32px 16px}
+    .app{min-height:calc(100dvh - 64px);border-radius:28px;border:1px solid var(--line);box-shadow:var(--shadow);overflow:clip}
+  }
+  .topbar{display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 20px 4px;font-size:13px;font-weight:700;color:var(--brand);letter-spacing:.02em}
+  .topbar svg{width:20px;height:20px;flex:none}
+
+  .screen{display:none;flex-direction:column;gap:14px;flex:1;padding:6px 20px 0}
+  .screen.active{display:flex;animation:in .24s ease}
+  .screen.active.rev{animation:inrev .24s ease}
+  @keyframes in{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+  @keyframes inrev{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+  .bar{display:flex;align-items:center;gap:12px;min-height:44px}
+  .bar h1{font-size:24px;line-height:1.15;margin:0;flex:1;font-weight:750;letter-spacing:-.02em}
+  .step{font-size:12px;font-weight:650;color:var(--brand);background:var(--brand-soft);padding:5px 10px;border-radius:999px;white-space:nowrap}
+  .progress{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .progress i{height:4px;border-radius:4px;background:var(--line)}
+  .progress i.on{background:var(--brand)}
+  .back{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+  .back svg{width:18px;height:18px}
+  p.hint{margin:0;font-size:15px;color:var(--ink-2);line-height:1.45}
+
+  /* Sticky action footer keeps the primary action reachable above the keyboard and home indicator */
+  .foot{position:sticky;bottom:0;margin:auto -20px 0;padding:12px 20px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,transparent,var(--surface) 14px);display:flex;flex-direction:column;gap:8px;z-index:4}
+  .foot .fine{font-size:12px;color:var(--ink-3);text-align:center;margin:0;line-height:1.4}
+
+  /* Map */
+  .map{position:relative;width:100%;aspect-ratio:350/280;border-radius:20px;overflow:hidden;cursor:crosshair;border:1px solid var(--line);background:var(--block);touch-action:none;user-select:none;-webkit-user-select:none}
+  .map svg.tiles{position:absolute;inset:0;width:100%;height:100%}
+  .map .coach{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;transition:opacity .2s}
+  .map .coach .ring{width:46px;height:46px;border-radius:50%;border:2.5px solid var(--brand);background:color-mix(in srgb,var(--brand) 14%,transparent);animation:pulse 1.6s ease-out infinite}
+  .map .coach b{font-size:13px;font-weight:650;background:var(--surface);color:var(--ink);padding:6px 11px;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+  .map.placed .coach{opacity:0}
+  .map.err{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+  @keyframes pulse{0%{transform:scale(.7);opacity:1}100%{transform:scale(1.35);opacity:0}}
+  .me{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:#2a7de1;border:3px solid #fff;display:none;pointer-events:none}
+  .me.on{display:block}
+  .acc{position:absolute;border-radius:50%;background:rgba(42,125,225,.14);border:1px solid rgba(42,125,225,.4);display:none;pointer-events:none;transform:translate(-50%,-50%)}
+  .acc.on{display:block}
+  .pin{position:absolute;width:40px;height:52px;margin:-50px 0 0 -20px;display:none;cursor:grab;filter:drop-shadow(0 4px 4px rgba(0,0,0,.25));touch-action:none}
+  .pin.on{display:block}
+  .pin.drop{animation:drop .35s cubic-bezier(.3,1.6,.6,1)}
+  .pin.dragging{cursor:grabbing;transform:translateY(-10px) scale(1.06);transition:transform .12s}
+  @keyframes drop{from{transform:translateY(-24px);opacity:0}to{transform:none;opacity:1}}
+  .pin-shadow{position:absolute;width:16px;height:6px;margin:-3px 0 0 -8px;border-radius:50%;background:rgba(0,0,0,.28);display:none;pointer-events:none}
+  .pin-shadow.on{display:block}
+  .locating{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--surface) 55%,transparent);backdrop-filter:blur(2px)}
+  .locating.on{display:flex}
+  .locating span{display:flex;align-items:center;gap:8px;background:var(--surface);padding:9px 14px;border-radius:999px;font-size:14px;font-weight:600;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+  .known{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--surface);border:2px solid var(--ink-3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--ink-2);pointer-events:none;box-shadow:0 2px 5px rgba(0,0,0,.18)}
+  .known.hit{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 25%,transparent)}
+
+  .spin{width:16px;height:16px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:rot .7s linear infinite;flex:none;display:inline-block}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:rot 1.6s linear infinite!important}}
+
+  .linkbtn{background:none;border:none;color:var(--brand);cursor:pointer;padding:10px 0;min-height:44px;font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+  .linkbtn[disabled]{color:var(--ink-3);cursor:progress}
+  .linkbtn svg{width:18px;height:18px}
+  .row-actions{display:flex;justify-content:space-between;align-items:center;margin:-8px 0 -10px;gap:12px}
+  .legend{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3)}
+  .legend i{width:12px;height:12px;border-radius:50%;border:2px solid var(--ink-3);background:var(--surface);flex:none}
+
+  .msg{display:flex;gap:10px;font-size:14px;line-height:1.45;padding:11px 14px;border-radius:14px;margin:0}
+  .msg svg{width:18px;height:18px;flex:none;margin-top:1px}
+  .msg.info{background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2)}
+  .msg.warn{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);color:var(--ink)}
+  .msg.warn svg{color:var(--warn)}
+  .msg.err{background:var(--danger-soft);border:1px solid color-mix(in srgb,var(--danger) 40%,transparent);color:var(--ink)}
+  .msg.err svg{color:var(--danger)}
+  .msg .msg-body{flex:1;display:flex;flex-direction:column;gap:8px}
+  .msg b{font-weight:700}
+  .msg .retry{align-self:flex-start;background:var(--surface);border:1.5px solid var(--danger);color:var(--danger);border-radius:10px;padding:8px 14px;min-height:40px;font-size:14px;font-weight:700;cursor:pointer}
+
+  .addr{padding:12px 14px;display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;transition:border-color .2s,background .2s}
+  .addr .ico{width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--ink-3);flex:none;transition:all .2s}
+  .addr.set .ico{background:var(--accent-soft);color:var(--accent)}
+  .addr.bad{border-color:var(--danger);background:var(--danger-soft)}
+  .addr.bad .ico{background:var(--surface);color:var(--danger)}
+  .addr.warn{border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+  .addr .ico svg{width:20px;height:20px}
+  .addr .txt{flex:1;min-width:0}
+  .addr strong{display:block;font-size:15px;font-weight:650}
+  .addr:not(.set):not(.bad) strong{color:var(--ink-3);font-weight:550}
+  .addr small{display:block;font-size:13px;color:var(--ink-2);margin-top:2px}
+  .addr.warn small{color:var(--warn)}
+  .addr.bad small{color:var(--danger)}
+
+  .btn{font-size:17px;font-weight:650;padding:16px;min-height:56px;background:var(--brand);color:#fff;border:none;border-radius:16px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 16px color-mix(in srgb,var(--brand) 30%,transparent);transition:transform .1s,background .2s}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn:not(.ghost){color:#06272a}}
+  :root[data-theme="dark"] .btn:not(.ghost){color:#06272a}
+  .btn:active{transform:scale(.98)}
+  .btn svg{width:18px;height:18px}
+  .btn[aria-disabled="true"]{opacity:.55}
+  .btn.busy{pointer-events:none;opacity:.9}
+  .btn.ghost{background:var(--surface);color:var(--brand);border:1.5px solid var(--brand);box-shadow:none}
+
+  /* Search combobox */
+  .search{position:relative}
+  .search input{font:inherit;font-size:16px;width:100%;min-height:48px;padding:12px 14px 12px 42px;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:14px;outline:none;-webkit-appearance:none;appearance:none}
+  .search input:focus{border-color:var(--brand-2);box-shadow:0 0 0 3px var(--brand-soft)}
+  .search input::placeholder{color:var(--ink-3)}
+  .search > svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--ink-3);pointer-events:none}
+  .sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);z-index:6;overflow:hidden;display:none;margin:0;padding:4px 0;list-style:none}
+  .sugg.on{display:block}
+  .sugg li[role="option"]{padding:12px 14px;min-height:44px;font-size:15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .sugg li[role="option"]:hover,.sugg li[aria-selected="true"]{background:var(--surface-2)}
+  .sugg li[aria-selected="true"]{box-shadow:inset 3px 0 0 var(--brand)}
+  .sugg li small{color:var(--ink-3);font-size:12.5px}
+  .sugg mark{background:none;color:inherit;font-weight:750}
+  .sugg .empty{padding:12px 14px;font-size:14px;color:var(--ink-3)}
+
+  .dup{display:none;flex-direction:column;gap:10px;padding:12px 14px;border-radius:16px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+  .dup.on{display:flex}
+  .dup p{margin:0;font-size:14px;line-height:1.45;color:var(--ink)}
+  .dup p b{font-weight:700}
+  .choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .choice button{font-size:14px;font-weight:650;padding:10px 8px;min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;line-height:1.25}
+  .choice button[aria-checked="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+
+  /* Details */
+  .field{display:flex;flex-direction:column;gap:8px;border:none;margin:0;padding:0;min-width:0}
+  .field-head{display:flex;justify-content:space-between;align-items:baseline}
+  label,.lab,legend.lab{font-size:14px;font-weight:650;padding:0}
+  .opt{color:var(--ink-3);font-size:13px;font-weight:500}
+  .photo{height:150px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;border:2px dashed var(--line);border-radius:18px;cursor:pointer;position:relative;background:var(--surface-2);color:var(--ink-2);font-size:14px;overflow:hidden;transition:border-color .2s;width:100%;padding:0}
+  .photo:hover{border-color:var(--brand-2)}
+  .photo .plus{width:52px;height:52px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;margin:0 auto 4px}
+  .photo .plus svg{width:26px;height:26px}
+  .photo b{font-weight:650;color:var(--ink)}
+  .photo small{color:var(--ink-3);font-size:12.5px}
+  .photo.working{pointer-events:none}
+  .preview{position:relative;height:170px;border-radius:18px;overflow:hidden;display:none;background:#2f383e}
+  .preview.on{display:block}
+  .preview img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .preview .tag{position:absolute;left:10px;bottom:10px;background:rgba(10,18,24,.76);color:#fff;padding:6px 10px;border-radius:10px;font-size:12.5px;font-weight:550;display:flex;align-items:center;gap:6px;backdrop-filter:blur(4px)}
+  .preview .tag svg{width:14px;height:14px}
+  .preview .acts{position:absolute;right:10px;top:10px;display:flex;gap:8px}
+  .preview .acts button{background:rgba(10,18,24,.76);color:#fff;border:none;border-radius:10px;padding:8px 12px;min-height:40px;font-size:13px;font-weight:600;cursor:pointer;backdrop-filter:blur(4px)}
+  .fine-inline{font-size:12.5px;color:var(--ink-3);margin:0;line-height:1.45}
+  textarea{font:inherit;font-size:16px;width:100%;min-height:84px;padding:12px 14px;resize:vertical;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+  textarea::placeholder{color:var(--ink-3)}
+  textarea:focus{border-color:var(--brand-2);box-shadow:0 0 0 3px var(--brand-soft)}
+  .count{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .count.near{color:var(--warn)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chips button{font-size:14px;font-weight:600;padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;min-height:44px}
+  .chips button[aria-checked="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+  .chips button .sz{display:inline-block;border-radius:50%;background:currentColor;opacity:.55;margin-right:6px;vertical-align:middle}
+  .toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:60px;border:1px solid var(--line);border-radius:16px;background:var(--surface);cursor:pointer;text-align:left;width:100%}
+  .toggle .tx{flex:1}
+  .toggle .tx b{display:block;font-size:15px;font-weight:650}
+  .toggle .tx small{display:block;font-size:13px;color:var(--ink-2);margin-top:2px}
+  .sw{width:46px;height:28px;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .2s}
+  .sw::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+  .toggle[aria-checked="true"]{border-color:var(--danger);background:var(--danger-soft)}
+  .toggle[aria-checked="true"] .sw{background:var(--danger)}
+  .toggle[aria-checked="true"] .sw::after{transform:translateX(18px)}
+  .msg.err a{color:var(--danger);font-weight:700}
+  .loc-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:16px}
+  .thumb{width:54px;height:54px;border-radius:12px;overflow:hidden;flex:none;position:relative;border:1px solid var(--line)}
+  .thumb svg{width:100%;height:100%;display:block}
+  .loc-row .txt{flex:1;min-width:0}
+  .loc-row .k{font-size:12px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  .loc-row strong{display:block;font-size:15px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .loc-row .linkbtn{padding:6px 2px;font-size:14px}
+
+  /* Confirmation */
+  .hero{display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:18px}
+  .check{width:96px;height:96px;border-radius:50%;background:var(--ok-soft);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:8px}
+  .check::before{content:"";position:absolute;inset:-12px;border-radius:50%;border:2px solid var(--ok-soft)}
+  .check span{width:64px;height:64px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;color:#fff}
+  .check svg{width:32px;height:32px}
+  .screen.active .check span{animation:pop .45s cubic-bezier(.3,1.6,.6,1)}
+  .screen.active .check svg path{stroke-dasharray:30;stroke-dashoffset:30;animation:draw .4s .25s ease forwards}
+  @media (prefers-reduced-motion:reduce){.check svg path{stroke-dashoffset:0!important}}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  h2{margin:0;font-size:26px;font-weight:750;letter-spacing:-.02em}
+  .center{text-align:center}
+  .refbox{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--accent-soft);border:1px dashed var(--accent);border-radius:14px}
+  .refbox .k{font-size:12px;color:var(--ink-2);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  .refbox .v{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:20px;font-weight:700;letter-spacing:1.5px}
+  .refbox .txt{flex:1;min-width:0}
+  .copy{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:44px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:88px;justify-content:center}
+  .copy svg{width:15px;height:15px}
+  .copy.done{color:var(--ok);border-color:var(--ok)}
+  .summary{padding:2px 14px;font-size:14px;display:grid;background:var(--surface-2);border:1px solid var(--line);border-radius:16px;margin:0}
+  .summary .row{display:flex;align-items:flex-start;gap:10px;padding:11px 0;color:var(--ink-2)}
+  .summary .row+.row{border-top:1px solid var(--line)}
+  .summary .row svg{width:18px;height:18px;color:var(--brand);flex:none;margin-top:1px}
+  .summary dt{margin:0}
+  .summary dd{color:var(--ink);font-weight:600;margin:0 0 0 auto;text-align:right;max-width:62%;overflow-wrap:anywhere}
+  .timeline{display:grid;gap:0;padding:4px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:16px;margin:0;list-style:none}
+  .timeline li{display:flex;gap:12px;padding:10px 0;font-size:14px;color:var(--ink-2);line-height:1.4}
+  .timeline li+li{border-top:1px solid var(--line)}
+  .timeline li b{color:var(--ink);font-weight:650;display:block}
+  .timeline .dot{width:24px;height:24px;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+  .timeline .dot.done{background:var(--ok);color:#fff}
+  .sec-k{font-size:12px;color:var(--ink-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:0 2px -6px}
+  .actions2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .actions2 .btn{font-size:15px;min-height:52px;padding:12px}
+
+  .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:var(--surface);font-size:14px;font-weight:600;padding:10px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:all .25s;max-width:calc(100vw - 32px);text-align:center;z-index:30}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+  .noscript{padding:24px 20px;font-size:15px;line-height:1.5}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to report form</a>
+<div class="app">
+  <header class="topbar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M9 21v-6h6v6"/></svg>
+    <span>City Street Maintenance</span>
+  </header>
+
+  <noscript><div class="noscript">This form needs JavaScript to place a pin on the map. To report a pothole without it, call the city's non-emergency line at 311.</div></noscript>
+
+  <main id="main">
+  <!-- SCREEN 1: LOCATION -->
+  <section class="screen active" data-screen="location" aria-labelledby="h-loc">
+    <div class="bar"><h1 id="h-loc">Where is the pothole?</h1><span class="step">Step 1 of 2</span></div>
+    <div class="progress" aria-hidden="true"><i class="on"></i><i></i></div>
+    <p class="hint" id="locHint">Search an address or tap the spot on the street. Drag the pin to fine-tune it.</p>
+
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+        placeholder="Search a street or address" aria-label="Search a street or address"
+        role="combobox" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false">
+      <ul class="sugg" id="sugg" role="listbox" aria-label="Address suggestions"></ul>
+    </div>
+
+    <div class="map" id="map" tabindex="0" role="application" aria-describedby="locHint mapKbd" aria-label="Map">
+      <span class="sr" id="mapKbd">With the keyboard, press Enter to drop a pin in the center, then use the arrow keys to move it. Hold Shift for bigger steps.</span>
+      <svg class="tiles" id="tiles" viewBox="0 0 350 280" preserveAspectRatio="none" aria-hidden="true">
+        <rect width="350" height="280" style="fill:var(--block)"/>
+        <rect x="196" y="16" width="122" height="72" rx="8" style="fill:var(--park)"/>
+        <path id="water" d="M0 232 C 80 214, 140 256, 220 240 S 330 220, 350 230 L350 280 L0 280Z" style="fill:var(--water)"/>
+        <g stroke-linecap="round" fill="none" style="stroke:var(--road-edge)">
+          <path d="M-10 108 H360" stroke-width="19"/><path d="M-10 192 H360" stroke-width="13"/>
+          <path d="M60 -10 V236" stroke-width="13"/><path d="M172 -10 V242" stroke-width="21"/><path d="M282 -10 V226" stroke-width="13"/>
+          <path d="M-10 40 L120 160 L210 262" stroke-width="11"/>
+          <path d="M20 150 H340" stroke-width="8"/>
+        </g>
+        <g stroke-linecap="round" fill="none" style="stroke:var(--road)">
+          <path d="M-10 108 H360" stroke-width="16"/><path d="M-10 192 H360" stroke-width="10"/>
+          <path d="M60 -10 V236" stroke-width="10"/><path d="M172 -10 V242" stroke-width="18"/><path d="M282 -10 V226" stroke-width="10"/>
+          <path d="M-10 40 L120 160 L210 262" stroke-width="8"/>
+          <path d="M20 150 H340" stroke-width="5"/>
+        </g>
+        <path d="M172 -10 V242" style="stroke:var(--accent)" stroke-width="1.6" stroke-dasharray="6 8" opacity=".5"/>
+        <g style="fill:var(--label)" font-size="8" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-weight="650" letter-spacing=".6">
+          <text x="84" y="104">MAIN ST</text>
+          <text x="178" y="20" transform="rotate(90 178 20)">OAK AVE</text>
+          <text x="66" y="20" transform="rotate(90 66 20)">ELM ST</text>
+          <text x="288" y="112" transform="rotate(90 288 112)">PINE ST</text>
+          <text x="226" y="147">CEDAR LN</text>
+          <text x="232" y="188">RIVER RD</text>
+          <text x="214" y="56">RIVERSIDE PARK</text>
+          <text x="40" y="262" opacity=".8">MILL RIVER</text>
+        </g>
+      </svg>
+      <div class="coach" id="coach" aria-hidden="true"><div class="ring"></div><b>Tap the pothole&rsquo;s spot</b></div>
+      <div class="known" id="k0" aria-hidden="true">!</div>
+      <div class="known" id="k1" aria-hidden="true">!</div>
+      <div class="acc" id="acc" aria-hidden="true"></div>
+      <div class="me" id="me" aria-hidden="true"></div>
+      <div class="pin-shadow" id="pinShadow" aria-hidden="true"></div>
+      <svg class="pin" id="pin" viewBox="0 0 40 52" aria-hidden="true">
+        <path d="M20 1C9.5 1 1 9.3 1 19.6 1 33 20 51 20 51s19-18 19-31.4C39 9.3 30.5 1 20 1z" style="fill:var(--accent)" stroke="#fff" stroke-width="2"/>
+        <circle cx="20" cy="19.5" r="7.5" fill="#fff"/><circle cx="20" cy="19.5" r="3.5" style="fill:var(--accent)"/>
+      </svg>
+      <div class="locating" id="locating" aria-hidden="true"><span><i class="spin" style="color:var(--brand)"></i>Finding you&hellip;</span></div>
+    </div>
+
+    <div class="row-actions">
+      <button class="linkbtn" id="useLoc" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        <span id="useLocLabel">Use my location</span>
+      </button>
+      <div class="legend"><i aria-hidden="true"></i>Already reported</div>
+    </div>
+
+    <p class="msg warn" id="locMsg" role="status" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <span id="locMsgText"></span>
+    </p>
+
+    <div class="addr" id="addrCard">
+      <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+      <div class="txt" id="addrLive" aria-live="polite">
+        <strong id="addrText">No spot marked yet</strong>
+        <small id="addrSub">The nearest address will appear here.</small>
+      </div>
+    </div>
+
+    <div class="dup" id="dup">
+      <p id="dupText" aria-live="polite">A pothole was already reported here.</p>
+      <div class="choice" role="radiogroup" aria-label="Is this the same pothole?">
+        <button type="button" role="radio" id="dupSame" aria-checked="true">Same one: add my confirmation</button>
+        <button type="button" role="radio" id="dupNew" aria-checked="false" tabindex="-1">Different pothole</button>
+      </div>
+    </div>
+
+    <div class="foot">
+      <button class="btn" id="toDetails" type="button" aria-disabled="true" aria-describedby="addrSub">Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <p class="fine">Emergency, such as a sinkhole or a crash? Call <a href="tel:911">911</a>.</p>
+    </div>
+  </section>
+
+  <!-- SCREEN 2: DETAILS + SUBMIT -->
+  <section class="screen" data-screen="details" aria-labelledby="h-det">
+    <div class="bar">
+      <button class="back" type="button" data-back aria-label="Back to location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1 id="h-det">Describe the pothole</h1><span class="step">Step 2 of 2</span>
+    </div>
+    <div class="progress" aria-hidden="true"><i class="on"></i><i class="on"></i></div>
+
+    <div class="loc-row">
+      <div class="thumb" aria-hidden="true"><svg id="thumb1" viewBox="0 0 54 54"></svg></div>
+      <div class="txt"><span class="k">Location</span><strong id="sumAddr">-</strong></div>
+      <button class="linkbtn" type="button" data-back aria-label="Change location">Change</button>
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="lab" id="photoLab">Photo <span class="opt">(optional)</span></span></div>
+      <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" class="sr" tabindex="-1" aria-hidden="true">
+      <button class="photo" id="photoBtn" type="button" aria-labelledby="photoLab photoCta" aria-describedby="photoHelp">
+        <span class="plus" id="photoIco" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+        <b id="photoCta">Take or choose a photo</b>
+        <small>A clear shot helps crews judge size and depth</small>
+      </button>
+      <div class="preview" id="preview">
+        <img id="previewImg" alt="Your photo of the pothole">
+        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span id="photoMeta">Photo added</span></span>
+        <div class="acts"><button type="button" id="retake">Replace</button><button type="button" id="removePhoto" aria-label="Remove photo">Remove</button></div>
+      </div>
+      <p class="msg err" id="photoErr" role="alert" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        <span id="photoErrText"></span>
+      </p>
+      <p class="fine-inline" id="photoHelp">Avoid faces and license plates. We remove the photo&rsquo;s hidden location data before sending.</p>
+    </div>
+
+    <fieldset class="field">
+      <legend class="lab" id="sizeLab">How big is it? <span class="opt">(optional)</span></legend>
+      <div class="chips" role="radiogroup" aria-labelledby="sizeLab" data-group="size">
+        <button type="button" role="radio" aria-checked="false" data-v="Small (fist-sized)"><span class="sz" style="width:7px;height:7px" aria-hidden="true"></span>Fist</button>
+        <button type="button" role="radio" aria-checked="false" data-v="Medium (dinner plate)"><span class="sz" style="width:11px;height:11px" aria-hidden="true"></span>Dinner plate</button>
+        <button type="button" role="radio" aria-checked="false" data-v="Large (car tire or bigger)"><span class="sz" style="width:15px;height:15px" aria-hidden="true"></span>Car tire or bigger</button>
+      </div>
+    </fieldset>
+
+    <fieldset class="field">
+      <legend class="lab" id="whereLab">Where on the road? <span class="opt">(optional)</span></legend>
+      <div class="chips" role="radiogroup" aria-labelledby="whereLab" data-group="where">
+        <button type="button" role="radio" aria-checked="false" data-v="Driving lane">Driving lane</button>
+        <button type="button" role="radio" aria-checked="false" data-v="Bike lane">Bike lane</button>
+        <button type="button" role="radio" aria-checked="false" data-v="Crosswalk">Crosswalk</button>
+        <button type="button" role="radio" aria-checked="false" data-v="Curb or shoulder">Curb or shoulder</button>
+      </div>
+    </fieldset>
+
+    <button class="toggle" id="hazard" type="button" role="switch" aria-checked="false">
+      <span class="tx"><b>It&rsquo;s a danger right now</b><small>Deep enough to damage a car or cause a fall</small></span>
+      <span class="sw" aria-hidden="true"></span>
+    </button>
+    <p class="msg err" id="hazardAlert" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <span>We&rsquo;ll flag this for priority review. If someone is hurt or a car is stuck, call <a href="tel:911">911</a>.</span>
+    </p>
+
+    <div class="field">
+      <div class="field-head"><label for="note">Anything crews should know? <span class="opt">(optional)</span></label><span class="count" id="count" aria-hidden="true">0/280</span></div>
+      <textarea id="note" maxlength="280" rows="3" enterkeyhint="done" aria-describedby="countSr" placeholder="e.g. Right-hand lane, just past the crosswalk"></textarea>
+      <span class="sr" id="countSr" aria-live="polite"></span>
+    </div>
+
+    <div class="msg err" id="sendErr" role="alert" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0M12 20h.01"/><path d="M3 3l18 18"/></svg>
+      <div class="msg-body"><span id="sendErrText"><b>Your report didn&rsquo;t send.</b> Nothing was lost. Check your connection and try again.</span><button type="button" class="retry" id="retry">Try again</button></div>
+    </div>
+
+    <div class="foot">
+      <button class="btn" id="submit" type="button"><span id="submitLabel">Send report</span><span id="submitIco" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:block"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></span></button>
+      <p class="fine">No account needed. Reports and photos may be released as public records.</p>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: CONFIRMATION -->
+  <section class="screen" data-screen="confirmation" aria-labelledby="h-done">
+    <div class="hero">
+      <div class="check" aria-hidden="true"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span></div>
+      <h2 class="center" id="h-done" tabindex="-1">Report sent</h2>
+      <p class="hint center" id="doneSub">Thank you. The city&rsquo;s street maintenance team has your report.</p>
+    </div>
+
+    <div class="refbox">
+      <div class="txt"><div class="k" id="refK">Reference number</div><div class="v" id="refNo" aria-labelledby="refK">PH-0000</div></div>
+      <button class="copy" type="button" id="copyRef" aria-label="Copy reference number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button>
+    </div>
+
+    <dl class="summary">
+      <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg><dt>Location</dt><dd id="cAddr">-</dd></div>
+      <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><dt>Photo</dt><dd id="cPhoto">None</dd></div>
+      <div class="row" id="cSizeRow" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><dt>Size</dt><dd id="cSize"></dd></div>
+      <div class="row" id="cWhereRow" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3L4 21M16 3l4 18M12 5v2M12 11v2M12 17v2"/></svg><dt>Position</dt><dd id="cWhere"></dd></div>
+      <div class="row" id="cHazRow" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--danger)" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><dt>Priority</dt><dd>Flagged as dangerous</dd></div>
+      <div class="row" id="cNoteRow" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h10"/></svg><dt>Note</dt><dd id="cNote"></dd></div>
+    </dl>
+
+    <p class="sec-k" id="nextK">What happens next</p>
+    <ol class="timeline" aria-labelledby="nextK">
+      <li><span class="dot done" aria-hidden="true">&#10003;</span><span><b>Received</b>Your report is in the street maintenance queue.</span></li>
+      <li><span class="dot" aria-hidden="true">2</span><span><b id="tInspect">Inspection</b><span id="tInspectSub">A crew checks the spot, usually within 5 business days.</span></span></li>
+      <li><span class="dot" aria-hidden="true">3</span><span><b>Repair</b>Most potholes are patched within 2 to 3 weeks of inspection, weather permitting.</span></li>
+    </ol>
+
+    <p class="fine-inline">Keep the reference number if you contact the city about this pothole. Neighbors who see it can confirm it instead of filing a duplicate.</p>
+
+    <div class="foot">
+      <div class="actions2">
+        <button class="btn ghost" id="share" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Share</button>
+        <button class="btn ghost" id="again" type="button">Report another</button>
+      </div>
+      <p class="fine">Prototype: sample map and simulated submission. No data was sent.</p>
+    </div>
+  </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var VW=350,VH=280;
+  var DRAFT_KEY='pothole-draft-v1';
+  var MAX_PHOTO_BYTES=25*1024*1024,MAX_EDGE=1600,NOTE_MAX=280;
+  var params=new URLSearchParams(location.search);
+  var SIM_FAIL=params.get('fail')==='1'; // QA hook: ?fail=1 forces a send failure
+
+  function uid(){try{if(crypto.randomUUID)return crypto.randomUUID()}catch(e){}return 'id-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)}
+  function fresh(){return {pt:null,addr:null,ok:false,photo:null,size:null,where:null,hazard:false,note:'',dup:null,same:true,key:uid()}}
+  var state=fresh();
+  var sending=false;
+  var known=[
+    {x:112,y:108,ref:'PH-0928-214',addr:'136 Main St',n:3,ago:'8 days ago'},
+    {x:172,y:58,ref:'PH-1002-087',addr:'518 Oak Ave',n:1,ago:'4 days ago'}
+  ];
+  function $(id){return document.getElementById(id)}
+
+  /* ---------- Draft persistence (survives reloads and app switches; never required) ---------- */
+  function saveDraft(){
+    try{var d={pt:state.pt,size:state.size,where:state.where,hazard:state.hazard,note:state.note,same:state.same,key:state.key,screen:cur};
+      sessionStorage.setItem(DRAFT_KEY,JSON.stringify(d));}catch(e){}
+  }
+  function loadDraft(){try{var s=sessionStorage.getItem(DRAFT_KEY);return s?JSON.parse(s):null}catch(e){return null}}
+  function clearDraft(){try{sessionStorage.removeItem(DRAFT_KEY)}catch(e){}}
+
+  /* ---------- Street model (map viewBox units) ---------- */
+  var roads=[
+    {n:'Main St',t:'h',v:108,w:8,a:0,b:350,base:100},
+    {n:'River Rd',t:'h',v:192,w:5,a:0,b:350,base:400},
+    {n:'Cedar Ln',t:'h',v:150,w:3,a:20,b:340,base:700},
+    {n:'Elm St',t:'v',v:60,w:5,a:0,b:236,base:200},
+    {n:'Oak Ave',t:'v',v:172,w:9,a:0,b:242,base:500},
+    {n:'Pine St',t:'v',v:282,w:5,a:0,b:226,base:300},
+    {n:'Harbor Way',t:'s',p:[[-10,40],[120,160],[210,262]],w:4,base:900}
+  ];
+  function segDist(px,py,x1,y1,x2,y2){
+    var dx=x2-x1,dy=y2-y1,t=((px-x1)*dx+(py-y1)*dy)/(dx*dx+dy*dy);t=Math.max(0,Math.min(1,t));
+    var cx=x1+t*dx,cy=y1+t*dy;return {d:Math.hypot(px-cx,py-cy),t:t};
+  }
+  function roadDist(r,x,y){
+    if(r.t==='h'){var cx=Math.max(r.a,Math.min(r.b,x));return {d:Math.hypot(x-cx,y-r.v),pos:cx};}
+    if(r.t==='v'){var cy=Math.max(r.a,Math.min(r.b,y));return {d:Math.hypot(x-r.v,y-cy),pos:cy};}
+    var best={d:1e9,pos:0};
+    for(var i=0;i<r.p.length-1;i++){var s=segDist(x,y,r.p[i][0],r.p[i][1],r.p[i+1][0],r.p[i+1][1]);if(s.d<best.d)best={d:s.d,pos:(i+s.t)*160};}
+    return best;
+  }
+  function inWater(x,y){
+    var w=$('water');
+    try{if(w.isPointInFill){var p=$('tiles').createSVGPoint();p.x=x;p.y=y;return w.isPointInFill(p);}}catch(e){}
+    return y>232+10*Math.sin(x/55);
+  }
+  function inPark(x,y){return x>196&&x<318&&y>16&&y<88}
+  function describe(x,y){
+    if(inWater(x,y))return {ok:false,level:'bad',title:'That spot is in the river',sub:'Move the pin onto a street to continue.'};
+    var ds=roads.map(function(r){var d=roadDist(r,x,y);return {r:r,d:d.d-r.w,pos:d.pos}}).sort(function(a,b){return a.d-b.d});
+    var a=ds[0],b=ds[1];
+    if(a.d>22){
+      if(inPark(x,y))return {ok:true,level:'warn',title:'Inside Riverside Park',sub:'Park paths are fine. For a street, drag the pin onto the road.'};
+      return {ok:true,level:'warn',title:'Near '+a.r.n,sub:'This looks off the road. Drag the pin onto the street if you can.'};
+    }
+    if(b.d<10&&b.r!==a.r)return {ok:true,level:'',title:a.r.n+' & '+b.r.n,sub:'Intersection'};
+    var num=a.r.base+Math.round(a.pos/6)*2;
+    return {ok:true,level:'',title:num+' '+a.r.n,sub:'Approximate address'};
+  }
+
+  /* ---------- Map + pin ---------- */
+  var map=$('map'),pin=$('pin'),sh=$('pinShadow');
+  function toView(px,py){return {x:px/map.clientWidth*VW,y:py/map.clientHeight*VH}}
+  function toPx(p){return {x:p.x/VW*map.clientWidth,y:p.y/VH*map.clientHeight}}
+  function placeKnown(){known.forEach(function(k,i){var el=$('k'+i),p=toPx(k);el.style.left=p.x+'px';el.style.top=p.y+'px';})}
+  var lastAnnounced='';
+  function render(drop){
+    placeKnown();
+    if(!state.pt){$('dup').classList.remove('on');return;}
+    var px=toPx(state.pt);
+    pin.style.left=px.x+'px';pin.style.top=px.y+'px';sh.style.left=px.x+'px';sh.style.top=px.y+'px';
+    pin.classList.add('on');sh.classList.add('on');map.classList.add('placed');map.classList.remove('err');
+    if(drop){pin.classList.remove('drop');void pin.getBoundingClientRect();pin.classList.add('drop');if(navigator.vibrate)try{navigator.vibrate(10)}catch(e){}}
+    var d=describe(state.pt.x,state.pt.y);state.addr=d.title;state.ok=d.ok;
+    $('addrCard').className='addr set'+(d.level?' '+d.level:'');
+    if(lastAnnounced!==d.title+d.sub){$('addrText').textContent=d.title;$('addrSub').textContent=d.sub;lastAnnounced=d.title+d.sub;}
+    map.setAttribute('aria-label','Map. Pin at '+d.title+'.');
+    var hit=null;known.forEach(function(k,i){$('k'+i).classList.remove('hit');if(Math.hypot(k.x-state.pt.x,k.y-state.pt.y)<16)hit=i;});
+    if(hit!==state.dup){state.dup=hit;state.same=true;}
+    var dp=$('dup');
+    if(hit!==null&&d.ok){
+      var k=known[hit];$('k'+hit).classList.add('hit');
+      var p=$('dupText');p.textContent='';
+      var b=document.createElement('b');b.textContent='Already reported here ';p.appendChild(b);
+      p.appendChild(document.createTextNode(k.ago+' ('+k.ref+'). '+(k.n===1?'1 neighbor has':k.n+' neighbors have')+' confirmed it. Is this the same pothole?'));
+      dp.classList.add('on');setRadio($('dupSame').parentNode,state.same?$('dupSame'):$('dupNew'));
+    } else dp.classList.remove('on');
+    $('toDetails').setAttribute('aria-disabled',String(!d.ok));
+    saveDraft();
+  }
+  function setRadio(group,btn){
+    group.querySelectorAll('[role="radio"]').forEach(function(x){var on=x===btn;x.setAttribute('aria-checked',String(on));x.tabIndex=on?0:-1;});
+  }
+  $('dupSame').addEventListener('click',function(){state.same=true;render(false)});
+  $('dupNew').addEventListener('click',function(){state.same=false;render(false)});
+  $('dup').addEventListener('keydown',function(e){
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].indexOf(e.key)<0)return;e.preventDefault();
+    state.same=!state.same;render(false);(state.same?$('dupSame'):$('dupNew')).focus();
+  });
+  function isDup(){return state.dup!==null&&state.same}
+
+  /* ---------- Address search (ARIA 1.2 combobox) ---------- */
+  var places=[];
+  roads.forEach(function(r){
+    if(r.t==='s'){places.push({t:'200 '+r.n,x:70,y:110});places.push({t:'260 '+r.n,x:140,y:183});return;}
+    [0.25,0.5,0.75].forEach(function(f){var pos=r.a+(r.b-r.a)*f,num=r.base+Math.round(pos/6)*2;
+      places.push(r.t==='h'?{t:num+' '+r.n,x:pos,y:r.v}:{t:num+' '+r.n,x:r.v,y:pos});});
+  });
+  [['Main St','Oak Ave',172,108],['Main St','Elm St',60,108],['River Rd','Oak Ave',172,192],['Cedar Ln','Pine St',282,150],['Main St','Pine St',282,108]].forEach(function(a){places.push({t:a[0]+' & '+a[1],x:a[2],y:a[3],ix:true})});
+  var q=$('q'),sg=$('sugg'),matches=[],active=-1,debounce;
+  function norm(s){return s.toLowerCase().replace(/\bstreet\b/g,'st').replace(/\bavenue\b/g,'ave').replace(/\broad\b/g,'rd').replace(/\blane\b/g,'ln').replace(/\band\b/g,'&').replace(/\s+/g,' ').trim()}
+  function closeSugg(){sg.classList.remove('on');q.setAttribute('aria-expanded','false');q.removeAttribute('aria-activedescendant');active=-1}
+  function setActive(i){
+    active=i;var opts=sg.querySelectorAll('[role="option"]');
+    opts.forEach(function(o,j){o.setAttribute('aria-selected',String(j===i))});
+    if(i>=0&&opts[i]){q.setAttribute('aria-activedescendant',opts[i].id);opts[i].scrollIntoView({block:'nearest'});}
+    else q.removeAttribute('aria-activedescendant');
+  }
+  function showSugg(){
+    var v=norm(q.value);
+    if(!v){closeSugg();return;}
+    var terms=v.split(' ');
+    matches=places.filter(function(p){var t=norm(p.t);return terms.every(function(w){return t.indexOf(w)>-1})}).slice(0,5);
+    sg.textContent='';
+    if(matches.length){
+      matches.forEach(function(p,i){
+        var li=document.createElement('li');li.id='opt'+i;li.setAttribute('role','option');li.setAttribute('aria-selected','false');li.dataset.i=i;
+        var s=document.createElement('span');s.textContent=p.t;var sm=document.createElement('small');sm.textContent=p.ix?'Intersection':'Address';
+        li.appendChild(s);li.appendChild(sm);sg.appendChild(li);
+      });
+    } else {
+      var e=document.createElement('li');e.className='empty';e.setAttribute('role','presentation');e.textContent='No match nearby. Try a street name, or tap the map.';sg.appendChild(e);
+    }
+    sg.classList.add('on');q.setAttribute('aria-expanded','true');setActive(-1);
+  }
+  function choose(i){
+    var p=matches[i];if(!p)return;
+    q.value=p.t;closeSugg();placeAtView(p.x,p.y-1,true);hideLocMsg();toast('Pin placed. Drag it to the exact spot.');
+  }
+  q.addEventListener('input',function(){clearTimeout(debounce);debounce=setTimeout(showSugg,120)});
+  q.addEventListener('focus',function(){if(q.value)showSugg()});
+  q.addEventListener('keydown',function(e){
+    var open=sg.classList.contains('on'),n=matches.length;
+    if(e.key==='ArrowDown'){e.preventDefault();if(!open)showSugg();if(n)setActive((active+1)%n);}
+    else if(e.key==='ArrowUp'){e.preventDefault();if(n)setActive(active<=0?n-1:active-1);}
+    else if(e.key==='Enter'){if(open&&n){e.preventDefault();choose(active<0?0:active);q.blur();}}
+    else if(e.key==='Escape'){if(open){e.preventDefault();closeSugg();}else{q.value='';}}
+  });
+  sg.addEventListener('pointerdown',function(e){e.preventDefault()}); // keep focus in input
+  sg.addEventListener('click',function(e){var li=e.target.closest('[role="option"]');if(li){choose(+li.dataset.i);q.blur();}});
+  q.addEventListener('blur',function(){setTimeout(closeSugg,0)});
+
+  function placeAtView(x,y,drop){
+    state.pt={x:Math.max(4,Math.min(VW-4,x)),y:Math.max(10,Math.min(VH-4,y))};render(drop);
+  }
+  function evtPt(e){var r=map.getBoundingClientRect();return toView(e.clientX-r.left,e.clientY-r.top)}
+
+  var dragging=false,startedOnPin=false,downAt=null;
+  map.addEventListener('pointerdown',function(e){
+    if(e.button>0)return;
+    startedOnPin=!!(e.target.closest&&e.target.closest('#pin'));
+    dragging=true;downAt={x:e.clientX,y:e.clientY};
+    try{map.setPointerCapture(e.pointerId)}catch(_){}
+    if(startedOnPin)pin.classList.add('dragging');
+  });
+  map.addEventListener('pointermove',function(e){
+    if(!dragging||!startedOnPin)return;
+    var p=evtPt(e);placeAtView(p.x,p.y,false);
+  });
+  map.addEventListener('pointerup',function(e){
+    if(!dragging)return;dragging=false;pin.classList.remove('dragging');
+    var moved=downAt&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)>8;
+    if(!startedOnPin&&!moved){var p=evtPt(e);placeAtView(p.x,p.y,true);hideLocMsg();}
+  });
+  map.addEventListener('pointercancel',function(){dragging=false;pin.classList.remove('dragging')});
+  map.addEventListener('keydown',function(e){
+    var step=e.shiftKey?20:5;
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();if(!state.pt)placeAtView(VW/2,VH/2,true);else $('toDetails').click();return;}
+    var k={ArrowUp:[0,-step],ArrowDown:[0,step],ArrowLeft:[-step,0],ArrowRight:[step,0]}[e.key];
+    if(!k)return;e.preventDefault();
+    if(!state.pt){placeAtView(VW/2,VH/2,true);return;}
+    placeAtView(state.pt.x+k[0],state.pt.y+k[1],false);
+  });
+  var rz;window.addEventListener('resize',function(){cancelAnimationFrame(rz);rz=requestAnimationFrame(function(){render(false);posMe();})});
+
+  /* ---------- Geolocation: real permission flow, mapped onto the sample map ---------- */
+  var meView=null,meAcc=0;
+  function posMe(){
+    if(!meView)return;var p=toPx(meView),m=$('me'),a=$('acc');
+    m.style.left=p.x+'px';m.style.top=p.y+'px';m.classList.add('on');
+    var r=Math.max(18,Math.min(120,meAcc/2))*map.clientWidth/VW;
+    a.style.left=p.x+'px';a.style.top=p.y+'px';a.style.width=a.style.height=(r*2)+'px';a.classList.add('on');
+  }
+  function showLocMsg(t){$('locMsgText').textContent=t;$('locMsg').hidden=false}
+  function hideLocMsg(){$('locMsg').hidden=true}
+  function locBusy(on){var b=$('useLoc');b.disabled=on;$('useLocLabel').textContent=on?'Finding you…':'Use my location';$('locating').classList.toggle('on',on);b.setAttribute('aria-busy',String(on))}
+  $('useLoc').addEventListener('click',function(){
+    hideLocMsg();
+    if(!('geolocation' in navigator)){showLocMsg('This browser can’t share your location. Search an address or tap the map instead.');return;}
+    locBusy(true);
+    var done=false,guard=setTimeout(function(){if(!done){done=true;locBusy(false);showLocMsg('Finding your location is taking too long. Search an address or tap the map instead.');}},12000);
+    navigator.geolocation.getCurrentPosition(function(pos){
+      if(done)return;done=true;clearTimeout(guard);locBusy(false);
+      // Production: project pos.coords onto the city basemap and reverse-geocode.
+      // Prototype: the sample map has no real coordinates, so we anchor to a fixed spot.
+      meView={x:166,y:126};meAcc=pos.coords.accuracy||30;posMe();
+      placeAtView(meView.x+6,meView.y-12,true);
+      if(meAcc>60)showLocMsg('Your location is approximate (within about '+Math.round(meAcc)+' m). Drag the pin to the exact spot.');
+      else toast('Pin placed at your location. Drag to adjust.');
+    },function(err){
+      if(done)return;done=true;clearTimeout(guard);locBusy(false);
+      if(err&&err.code===1)showLocMsg('Location access is off for this site. You can turn it on in your browser settings, or search an address or tap the map.');
+      else showLocMsg('We couldn’t find your location. Search an address or tap the map instead.');
+    },{enableHighAccuracy:true,timeout:10000,maximumAge:30000});
+  });
+
+  /* ---------- Navigation with real browser history ---------- */
+  var order=['location','details','confirmation'];var cur='location';
+  function go(name,opts){
+    opts=opts||{};
+    var rev=order.indexOf(name)<order.indexOf(cur);cur=name;
+    document.querySelectorAll('.screen').forEach(function(s){
+      var on=s.dataset.screen===name;s.classList.toggle('active',on);s.classList.toggle('rev',on&&rev);
+    });
+    if(name==='details'){
+      $('sumAddr').textContent=state.addr;drawThumb($('thumb1'));
+      $('h-det').textContent=isDup()?'Confirm it’s still there':'Describe the pothole';
+      setSubmitIdle();
+    }
+    if(name==='location')setTimeout(function(){render(false);posMe()},0);
+    document.title=({location:'Where is the pothole?',details:'Describe the pothole',confirmation:'Report sent'})[name]+' · Report a Pothole';
+    if(!opts.fromPop){
+      try{
+        if(opts.replace)history.replaceState({s:name},'');else history.pushState({s:name},'');
+      }catch(e){}
+    }
+    window.scrollTo(0,0);
+    var h=document.querySelector('.screen.active h1,.screen.active h2');if(h){h.setAttribute('tabindex','-1');h.focus({preventScroll:true});}
+    if(name!=='confirmation')saveDraft();
+  }
+  window.addEventListener('popstate',function(e){
+    var s=(e.state&&e.state.s)||'location';
+    if(cur==='confirmation'){reset();try{history.replaceState({s:'location'},'')}catch(_){}go('location',{fromPop:true});return;}
+    if(sending)return;
+    if(s==='details'&&!state.ok)s='location';
+    if(s==='confirmation')s='location';
+    go(s,{fromPop:true});
+  });
+  $('toDetails').addEventListener('click',function(){
+    if(!state.pt){
+      $('addrCard').className='addr bad';$('addrText').textContent='Mark the spot first';$('addrSub').textContent='Tap the map, search an address, or use your location.';
+      lastAnnounced='';map.classList.add('err');map.focus();return;
+    }
+    if(!state.ok){map.classList.add('err');map.focus();return;}
+    go('details');
+  });
+  document.querySelectorAll('[data-back]').forEach(function(b){b.addEventListener('click',function(){if(sending)return;try{history.back()}catch(e){go('location')}})});
+
+  function drawThumb(svg){
+    var cx=state.pt.x,cy=state.pt.y,s=54,sc=1.6,x0=cx-s/sc/2,y0=cy-s/sc/2;
+    svg.setAttribute('viewBox',x0+' '+y0+' '+(s/sc)+' '+(s/sc));
+    svg.textContent='';
+    var src=$('tiles');
+    for(var i=0;i<src.childNodes.length;i++){var n=src.childNodes[i];if(n.nodeType!==1)continue;if(n.tagName.toLowerCase()==='g'&&n.querySelector('text'))continue;svg.appendChild(n.cloneNode(true));}
+    var w=svg.querySelector('#water');if(w)w.removeAttribute('id');
+    var ns='http://www.w3.org/2000/svg',c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',4.5);c.setAttribute('stroke','#fff');c.setAttribute('stroke-width','1.6');c.style.fill='var(--accent)';
+    svg.appendChild(c);
+  }
+
+  /* ---------- Photo: validate, downscale, strip metadata by re-encoding ---------- */
+  var file=$('file'),photoURL=null;
+  function photoError(t){$('photoErrText').textContent=t;$('photoErr').hidden=false}
+  function photoBusy(on){var b=$('photoBtn');b.classList.toggle('working',on);b.setAttribute('aria-busy',String(on));
+    $('photoCta').textContent=on?'Preparing photo…':'Take or choose a photo';}
+  function fmtBytes(n){return n<1024*1024?Math.round(n/1024)+' KB':(n/1024/1024).toFixed(1)+' MB'}
+  function clearPhoto(){
+    state.photo=null;if(photoURL){URL.revokeObjectURL(photoURL);photoURL=null}
+    $('previewImg').removeAttribute('src');$('preview').classList.remove('on');$('photoBtn').hidden=false;file.value='';
+  }
+  function processPhoto(f){
+    $('photoErr').hidden=true;
+    if(!f)return;
+    if(f.type&&!/^image\//.test(f.type)){photoError('That file isn’t a photo. Choose a JPG, PNG or HEIC image.');return;}
+    if(f.size>MAX_PHOTO_BYTES){photoError('That photo is over 25 MB. Choose a smaller one or take a new photo.');return;}
+    photoBusy(true);
+    var src=URL.createObjectURL(f),img=new Image();
+    img.onload=function(){
+      var w=img.naturalWidth,h=img.naturalHeight,s=Math.min(1,MAX_EDGE/Math.max(w,h));
+      var c=document.createElement('canvas');c.width=Math.round(w*s);c.height=Math.round(h*s);
+      try{
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        c.toBlob(function(blob){
+          URL.revokeObjectURL(src);photoBusy(false);
+          if(!blob){photoError('We couldn’t prepare that photo. Try another one.');return;}
+          clearPhoto();photoURL=URL.createObjectURL(blob);state.photo={blob:blob,w:c.width,h:c.height};
+          $('previewImg').src=photoURL;$('photoMeta').textContent='Photo ready · '+fmtBytes(blob.size)+' · location data removed';
+          $('preview').classList.add('on');$('photoBtn').hidden=true;$('retake').focus();
+        },'image/jpeg',0.82);
+      }catch(e){URL.revokeObjectURL(src);photoBusy(false);photoError('We couldn’t prepare that photo. Try another one.');}
+    };
+    img.onerror=function(){URL.revokeObjectURL(src);photoBusy(false);
+      photoError(/hei[cf]/i.test(f.type+f.name)?'This browser can’t open HEIC photos. Take the photo again from this page, or choose a JPG.':'We couldn’t open that photo. Try a JPG or PNG.');};
+    img.src=src;
+  }
+  $('photoBtn').addEventListener('click',function(){file.click()});
+  $('retake').addEventListener('click',function(){file.click()});
+  file.addEventListener('change',function(){processPhoto(file.files&&file.files[0])});
+  $('removePhoto').addEventListener('click',function(){clearPhoto();toast('Photo removed');$('photoBtn').focus()});
+
+  /* ---------- Note ---------- */
+  var note=$('note'),countT;
+  function updCount(){var n=note.value.length,c=$('count');c.textContent=n+'/'+NOTE_MAX;c.classList.toggle('near',n>=NOTE_MAX-30);
+    clearTimeout(countT);countT=setTimeout(function(){$('countSr').textContent=n>=NOTE_MAX-30?(NOTE_MAX-n)+' characters left':''},600);}
+  note.addEventListener('input',function(){state.note=note.value;updCount();saveDraft()});
+
+  /* ---------- Size, position, hazard (single-select radio groups, deselectable) ---------- */
+  document.querySelectorAll('.chips').forEach(function(g){
+    var btns=[].slice.call(g.querySelectorAll('[role="radio"]'));
+    function roving(){var sel=btns.filter(function(b){return b.getAttribute('aria-checked')==='true'})[0];btns.forEach(function(b){b.tabIndex=(sel?b===sel:b===btns[0])?0:-1})}
+    function pick(b,toggle){var key=g.dataset.group,on=toggle?b.getAttribute('aria-checked')!=='true':true;
+      btns.forEach(function(x){x.setAttribute('aria-checked','false')});if(on)b.setAttribute('aria-checked','true');
+      state[key]=on?b.dataset.v:null;roving();saveDraft();}
+    g.addEventListener('click',function(e){var b=e.target.closest('[role="radio"]');if(b)pick(b,true)});
+    g.addEventListener('keydown',function(e){
+      var i=btns.indexOf(document.activeElement);if(i<0)return;
+      var d={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[e.key];if(!d)return;e.preventDefault();
+      var nb=btns[(i+d+btns.length)%btns.length];pick(nb,false);nb.focus();
+    });
+    g._sync=function(){btns.forEach(function(b){b.setAttribute('aria-checked',String(state[g.dataset.group]===b.dataset.v))});roving()};
+    roving();
+  });
+  function setHazard(v){state.hazard=v;$('hazard').setAttribute('aria-checked',String(v));$('hazardAlert').hidden=!v;saveDraft()}
+  $('hazard').addEventListener('click',function(){setHazard(!state.hazard)});
+
+  /* ---------- Submit: idempotent, timeout, offline-aware, retryable ---------- */
+  var SEND_ICON=$('submitIco').innerHTML;
+  function setSubmitIdle(){
+    $('submitLabel').textContent=isDup()?'Add my confirmation':'Send report';
+    $('submitIco').innerHTML=SEND_ICON;var b=$('submit');b.classList.remove('busy');b.removeAttribute('aria-busy');
+  }
+  function fakeApi(payload){
+    // Production: POST multipart to /api/reports with header Idempotency-Key: payload.key,
+    // so a retried request after a dropped connection never files a second report.
+    return new Promise(function(resolve,reject){
+      var ms=900+Math.random()*500;
+      var t=setTimeout(function(){
+        if(SIM_FAIL||!navigator.onLine){reject({kind:navigator.onLine?'server':'offline'});return;}
+        resolve({ref:'PH-'+String(new Date().getMonth()+1).padStart(2,'0')+String(new Date().getDate()).padStart(2,'0')+'-'+String(Math.floor(100+Math.random()*900))});
+      },ms);
+      setTimeout(function(){clearTimeout(t);reject({kind:'timeout'})},20000);
+    });
+  }
+  function send(){
+    if(sending)return;
+    if(!state.ok){go('location');return;}
+    sending=true;$('sendErr').hidden=true;
+    var b=$('submit');b.classList.add('busy');b.setAttribute('aria-busy','true');
+    $('submitLabel').textContent='Sending…';$('submitIco').innerHTML='<i class="spin"></i>';
+    var payload={key:state.key,pt:state.pt,addr:state.addr,dupOf:isDup()?known[state.dup].ref:null,size:state.size,where:state.where,hazard:state.hazard,note:note.value.trim().slice(0,NOTE_MAX),photo:state.photo?state.photo.blob:null};
+    fakeApi(payload).then(function(res){
+      sending=false;
+      var dupK=isDup()?known[state.dup]:null,ref=dupK?dupK.ref:res.ref;
+      if(dupK)dupK.n++;
+      $('refNo').textContent=ref;
+      $('h-done').textContent=dupK?'Confirmation added':'Report sent';
+      $('doneSub').textContent=dupK?'Thanks. You’re the '+ord(dupK.n+1)+' resident to report this pothole, which helps the city prioritize it.':'Thank you. The city’s street maintenance team has your report.';
+      $('tInspect').textContent=state.hazard?'Priority inspection':'Inspection';
+      $('tInspectSub').textContent=state.hazard?'Reports flagged as dangerous are checked within 24 hours.':'A crew checks the spot, usually within 5 business days.';
+      $('cSizeRow').hidden=!state.size;$('cSize').textContent=state.size||'';
+      $('cWhereRow').hidden=!state.where;$('cWhere').textContent=state.where||'';
+      $('cHazRow').hidden=!state.hazard;
+      $('cAddr').textContent=state.addr;
+      $('cPhoto').textContent=state.photo?'1 attached':'None';
+      var t=payload.note;$('cNoteRow').hidden=!t;$('cNote').textContent=t?'“'+t+'”':'';
+      clearDraft();setSubmitIdle();
+      go('confirmation',{replace:true});
+    },function(err){
+      sending=false;setSubmitIdle();
+      var m={offline:'<b>You’re offline.</b> Nothing was lost. Reconnect and tap Try again.',
+             timeout:'<b>This is taking too long.</b> Nothing was lost. Check your connection and try again.',
+             server:'<b>Your report didn’t send.</b> Nothing was lost. Please try again in a moment.'}[err&&err.kind]||'<b>Your report didn’t send.</b> Nothing was lost. Please try again.';
+      $('sendErrText').innerHTML=m;$('sendErr').hidden=false;$('retry').focus();
+    });
+  }
+  $('submit').addEventListener('click',send);
+  $('retry').addEventListener('click',send);
+  window.addEventListener('online',function(){if(!$('sendErr').hidden)toast('Back online. Tap Try again to send.')});
+
+  /* ---------- Confirmation ---------- */
+  function copyText(txt){
+    if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(txt);
+    return new Promise(function(res,rej){var ta=document.createElement('textarea');ta.value=txt;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy')?res():rej()}catch(e){rej()}document.body.removeChild(ta);});
+  }
+  $('copyRef').addEventListener('click',function(){
+    var b=this,txt=$('refNo').textContent;
+    copyText(txt).then(function(){b.classList.add('done');b.querySelector('span').textContent='Copied';toast('Reference number copied');
+      setTimeout(function(){b.classList.remove('done');b.querySelector('span').textContent='Copy'},1800)},
+      function(){toast('Couldn’t copy. Your reference is '+txt)});
+  });
+  function ord(n){var s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
+  $('share').addEventListener('click',function(){
+    var txt='I reported a pothole at '+state.addr+' to the city (ref '+$('refNo').textContent+'). If you see it too, add your confirmation.';
+    if(navigator.share){navigator.share({title:'Pothole report',text:txt}).catch(function(){})}
+    else copyText(txt).then(function(){toast('Share message copied')},function(){toast('Sharing isn’t available in this browser')});
+  });
+  function reset(){
+    state=fresh();q.value='';closeSugg();setHazard(false);lastAnnounced='';
+    document.querySelectorAll('.chips').forEach(function(g){g._sync()});
+    known.forEach(function(k,i){$('k'+i).classList.remove('hit')});$('dup').classList.remove('on');
+    pin.classList.remove('on','drop');sh.classList.remove('on');map.classList.remove('placed','err');
+    $('me').classList.remove('on');$('acc').classList.remove('on');meView=null;hideLocMsg();
+    $('addrCard').className='addr';$('addrText').textContent='No spot marked yet';$('addrSub').textContent='The nearest address will appear here.';
+    map.setAttribute('aria-label','Map');
+    $('toDetails').setAttribute('aria-disabled','true');clearPhoto();$('photoErr').hidden=true;$('sendErr').hidden=true;
+    note.value='';updCount();clearDraft();
+  }
+  $('again').addEventListener('click',function(){reset();go('location',{replace:true})});
+
+  /* ---------- Boot: restore an unfinished draft ---------- */
+  var toastT;function toast(m){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on')},2600)}
+  function boot(){
+    try{history.replaceState({s:'location'},'')}catch(e){}
+    var d=loadDraft();
+    if(d&&d.pt){
+      state.key=d.key||state.key;state.size=d.size||null;state.where=d.where||null;state.note=d.note||'';state.same=d.same!==false;
+      note.value=state.note;updCount();setHazard(!!d.hazard);
+      document.querySelectorAll('.chips').forEach(function(g){g._sync()});
+      state.pt=d.pt;render(false);state.same=d.same!==false;render(false);
+      if(d.screen==='details'&&state.ok){go('details');toast('We kept your unfinished report. Add a photo again if you had one.');}
+      else toast('We kept the spot you marked.');
+    } else render(false);
+  }
+  requestAnimationFrame(boot);
+})();
+</script>
+</body>
+</html>

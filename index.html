@@ -99,7 +99,7 @@ tr:last-child td { border-bottom: 0; }
 <header class="stack prose">
   <p class="eyebrow">Companion to "Scope Is the Skill" · Human Factors Brief</p>
   <h1>The heap comes from the request</h1>
-  <p>AI prototypes often arrive overbuilt: ask for an app, receive ten screens, spend the afternoon deleting eight. This page shows where that comes from. The same model, asked for the same app, built a whole product when the request had no scope and a single task when it did. With the scope set, it built three approaches in less time than the one overbuilt version, and one prototype that switches between three fidelities.</p>
+  <p>AI prototypes often arrive overbuilt: ask for an app, receive ten screens, spend the afternoon deleting eight. This page shows where that comes from. The same model, asked for the same app, built a whole product when the request had no scope and a single task when it did. Given the same three follow-ups, "make it better" and its cousins, the unscoped build grew to 26 screens while the scoped one stayed at 3. With the scope set, the model also built three approaches in less time than the one overbuilt version, and one prototype that switches between three fidelities.</p>
   <p class="meta">Every prototype here is unedited AI output, generated October 5 and 6, 2026. Prompts, counts, and the scripts that produced them are in the <a href="https://github.com/jwbrown1969/AI-Prototype_Example">repository</a>.</p>
 </header>
 
@@ -142,6 +142,69 @@ Render it as a hand-drawn grayscale wireframe with placeholder text, no color or
     </div>
   </div>
   <p class="meta prose">Both requests ended with the same technical block, which included "Do not ask questions; make your own decisions." Apart from the scoped request's rendering line, scope was the only difference.</p>
+</section>
+
+<section class="stack">
+  <h2>Then the follow-ups</h2>
+  <p class="prose">Overbuilt prototypes rarely come from one prompt. They come from what people type next. Both builds above, the unscoped one and a polished version of the scoped one, were given the same three follow-ups in order, each in a fresh session that saw only the original request, the current file, and the new message.</p>
+  <pre>1. This is good. Make it better.
+2. What else would residents want from an app like this? Add it.
+3. Make it production-ready.</pre>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Screens after</th><th>Start</th><th>Round 1</th><th>Round 2</th><th>Round 3</th></tr></thead>
+      <tbody>
+        <tr><td>Unscoped</td><td class="num">11</td><td class="num">12</td><td class="num">18</td><td class="num flag">26</td></tr>
+        <tr><td>Scoped</td><td class="num">3</td><td class="num">3</td><td class="num">3</td><td class="num">3</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pair">
+    <div>
+      <p class="eyebrow">Unscoped, after round 3</p>
+      <p><span class="count">26 screens</span> <span class="meta">· about 1,200 words</span></p>
+      <div class="sheet">
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_01_welcome.png" alt="Welcome screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_02_sign-in.png" alt="Sign in screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_03_verify.png" alt="Verify code screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_04_home.png" alt="Home screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_05_category.png" alt="Category screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_06_search.png" alt="Search screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_07_locate.png" alt="Locate screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_08_photo.png" alt="Photo screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_09_details.png" alt="Details screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_10_review.png" alt="Review screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_11_submitted.png" alt="Submitted screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_12_my-reports.png" alt="My reports screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_13_track.png" alt="Track screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_14_report-detail.png" alt="Report detail screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_15_updates.png" alt="Updates screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_16_profile.png" alt="Profile screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_17_roadwork.png" alt="Roadwork screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_18_places.png" alt="Places screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_19_claim.png" alt="Claim screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_20_city-stats.png" alt="City stats screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_21_thread.png" alt="Thread screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_22_outbox.png" alt="Outbox screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_23_privacy.png" alt="Privacy screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_24_terms.png" alt="Terms screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_25_about.png" alt="About screen" loading="lazy"></a>
+        <a href="prototypes/U3_unscoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/U3_26_not-found.png" alt="Not found screen" loading="lazy"></a>
+      </div>
+      <p>"Better" went wide. The pothole reporter became a civic platform: reports for streetlights, sidewalks, signs, and storm drains; vehicle damage claims; messaging with repair crews; a dashboard of city repair times by ward; roadwork alerts; saved places; sign-in with a verification code; an offline outbox; and privacy, terms, about, and error pages.</p>
+    </div>
+    <div>
+      <p class="eyebrow">Scoped, after round 3</p>
+      <p><span class="count">3 screens</span> <span class="meta">· about 330 words</span></p>
+      <div class="sheet three">
+        <a href="prototypes/S3_scoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/S3_01_location.png" alt="Location screen" loading="lazy"></a>
+        <a href="prototypes/S3_scoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/S3_02_details.png" alt="Details screen" loading="lazy"></a>
+        <a href="prototypes/S3_scoped_round3.html" target="_blank" rel="noopener"><img src="thumbs/S3_03_confirmation.png" alt="Confirmation screen" loading="lazy"></a>
+      </div>
+      <p>"Better" went deep. The same task gained size and position questions, a marker for potholes neighbors have already reported, a privacy note on photos, keyboard support for placing the pin, and an emergency line. Its words grew more than fourfold too, but all of it serves reporting one pothole.</p>
+    </div>
+  </div>
+  <p class="meta prose">One addition pushes against the scope: the scoped confirmation screen gained a "What happens next" timeline (received, inspection, repair). It explains the process rather than tracking a report, but it sits close to the status tracking the scope ruled out. The same follow-ups produced opposite directions of growth; the request decided which.</p>
 </section>
 
 <section class="stack">
@@ -235,17 +298,19 @@ Render it as a hand-drawn grayscale wireframe with placeholder text, no color or
         <tr><td>D1–D3</td><td>Scoped, three starting points: <a href="prototypes/D1_map_first.html">map</a>, <a href="prototypes/D2_camera_first.html">camera</a>, <a href="prototypes/D3_address_first.html">address</a></td><td class="num">3 each</td><td class="num">n/a</td><td class="num">57, 45, 42 s</td></tr>
         <tr><td>E</td><td><a href="prototypes/E_scoped_polished.html">C redrawn as polished, keeping copy</a></td><td class="num">3</td><td class="num">100%</td><td class="num">105 s</td></tr>
         <tr><td>F</td><td><a href="prototypes/F_scoped_three_fidelities.html">Scoped, three fidelities in one build</a></td><td class="num">3</td><td class="num">n/a</td><td class="num">151 s</td></tr>
+        <tr><td>U1–U3</td><td>Unscoped follow-ups: <a href="prototypes/U1_unscoped_round1.html">round 1</a>, <a href="prototypes/U2_unscoped_round2.html">round 2</a>, <a href="prototypes/U3_unscoped_round3.html">round 3</a></td><td class="num">12, 18, 26</td><td class="num">n/a</td><td class="num">479, 801, 1,510 s</td></tr>
+        <tr><td>S1–S3</td><td>Scoped follow-ups: <a href="prototypes/S1_scoped_round1.html">round 1</a>, <a href="prototypes/S2_scoped_round2.html">round 2</a>, <a href="prototypes/S3_scoped_round3.html">round 3</a></td><td class="num">3, 3, 3</td><td class="num">n/a</td><td class="num">167, 199, 441 s</td></tr>
         <tr><td>B</td><td><a href="prototypes/B_unscoped_sketch.html">A redrawn as sketch, "placeholder text"</a></td><td class="num">11</td><td class="num flag">4%</td><td class="num">95 s</td></tr>
         <tr><td>B2</td><td><a href="prototypes/B2_unscoped_sketch_copy_kept.html">A redrawn as sketch, keeping copy</a></td><td class="num">11</td><td class="num">100%</td><td class="num">173 s</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="meta prose">Screens are counted from the prototype files by count.py. Copy kept is the share of distinct words on each screen of the source that also appear on the same screen of the redraw. Time is the wall-clock length of each generation session. Thumbnails were rendered from the files by render_thumbs.py.</p>
+  <p class="meta prose">Screens are counted from the prototype files by count.py. Copy kept is the share of distinct words on each screen of the source that also appear on the same screen of the redraw. Time is the wall-clock length of each generation session; for the follow-up rounds it includes the time the model spent testing its own build, so those times are not comparable with the first-request runs. Thumbnails were rendered from the files by render_thumbs.py.</p>
 </section>
 
 <section class="stack prose">
   <h2>Limits</h2>
-  <p>This is one flow, one model, and one run per request; another run could return a different screen count or keep more or less copy. The demonstration shows that the scope in a request set the size of the build and that fidelity can be set by request. It does not show what participants would say about any version.</p>
+  <p>This is one flow, one model, and one run per request; another run could return a different screen count or keep more or less copy, and three follow-ups are one plausible sequence among many. The demonstration shows that the scope in a request set the size of the build and that fidelity can be set by request. It does not show what participants would say about any version.</p>
   <p>It also cannot show the half of the skill that matters most. The scope above is a reasonable assumption about what a pothole report needs, not the product of field research. In real work, that paragraph comes from knowing the people, the task, and the organization, and a scope is only as good as the understanding behind it.</p>
 </section>
 

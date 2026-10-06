@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pothole Report</title>
+<style>
+  :root{
+    --bg:#e9ecef;--surface:#ffffff;--surface-2:#f4f6f8;--ink:#14212b;--ink-2:#4a5a67;--ink-3:#7d8c99;
+    --line:#dde3e8;--brand:#0f5c63;--brand-2:#13808a;--brand-soft:#e3f2f2;--accent:#e8960a;--accent-soft:#fff4dc;
+    --ok:#1f9d63;--ok-soft:#e2f5ec;--warn:#b54708;--warn-soft:#fef0e6;--danger:#c4321f;
+    --road:#ffffff;--road-edge:#d3dad0;--block:#e7ece4;--park:#cfe6c8;--water:#cfe3f0;--label:#6b7a86;
+    --shadow:0 20px 50px rgba(20,33,43,.18),0 4px 12px rgba(20,33,43,.08);
+  }
+  :root{--danger-soft:#fdecea}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c1216;--surface:#151e24;--surface-2:#1c272e;--ink:#eef3f6;--ink-2:#a9b8c3;--ink-3:#7a8c9a;
+      --line:#2a3740;--brand:#3fb5bd;--brand-2:#5fcad1;--brand-soft:#16343a;--accent:#f5b53a;--accent-soft:#3a2f17;
+      --ok:#3cc488;--ok-soft:#173528;--warn:#f0a35e;--warn-soft:#3a2716;--danger:#ff7b6b;--danger-soft:#3d1c18;
+      --road:#3a4a55;--road-edge:#2a3740;--block:#1f2a31;--park:#21382a;--water:#1b3346;--label:#93a4b1;
+      --shadow:0 20px 50px rgba(0,0,0,.5),0 4px 12px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1216;--surface:#151e24;--surface-2:#1c272e;--ink:#eef3f6;--ink-2:#a9b8c3;--ink-3:#7a8c9a;
+    --line:#2a3740;--brand:#3fb5bd;--brand-2:#5fcad1;--brand-soft:#16343a;--accent:#f5b53a;--accent-soft:#3a2f17;
+    --ok:#3cc488;--ok-soft:#173528;--warn:#f0a35e;--warn-soft:#3a2716;--danger:#ff7b6b;--danger-soft:#3d1c18;
+    --road:#3a4a55;--road-edge:#2a3740;--block:#1f2a31;--park:#21382a;--water:#1b3346;--label:#93a4b1;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);display:flex;justify-content:center;padding:24px 16px;-webkit-font-smoothing:antialiased;min-height:100vh}
+  button{font:inherit;color:inherit}
+  :focus-visible{outline:3px solid var(--brand-2);outline-offset:2px}
+  [hidden]{display:none!important}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  .phone{width:100%;max-width:390px;min-height:800px;background:var(--surface);border-radius:44px;padding:12px 0 0;position:relative;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--line)}
+  .status{display:flex;justify-content:space-between;align-items:center;padding:6px 28px 10px;font-size:14px;font-weight:600}
+  .status .island{width:110px;height:30px;background:#000;border-radius:20px}
+  .status .sys{display:flex;gap:5px;align-items:center}
+  .status svg{width:17px;height:12px;fill:var(--ink)}
+
+  .screen{display:none;flex-direction:column;gap:14px;flex:1;padding:4px 20px 20px}
+  .screen.active{display:flex;animation:in .28s ease}
+  .screen.active.rev{animation:inrev .28s ease}
+  @keyframes in{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+  @keyframes inrev{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .bar{display:flex;align-items:center;gap:12px;padding:6px 0 0;min-height:44px}
+  .bar h1{font-size:24px;line-height:1.15;margin:0;flex:1;font-weight:750;letter-spacing:-.02em}
+  .step{font-size:12px;font-weight:650;color:var(--brand);background:var(--brand-soft);padding:5px 10px;border-radius:999px;white-space:nowrap}
+  .progress{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .progress i{height:4px;border-radius:4px;background:var(--line)}
+  .progress i.on{background:var(--brand)}
+  .back{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;width:40px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+  .back svg{width:18px;height:18px}
+  p.hint{margin:0;font-size:15px;color:var(--ink-2);line-height:1.45}
+
+  /* Map */
+  .map{position:relative;width:100%;aspect-ratio:350/280;border-radius:20px;overflow:hidden;cursor:crosshair;border:1px solid var(--line);background:var(--block);touch-action:none;user-select:none;-webkit-user-select:none}
+  .map svg.tiles{position:absolute;inset:0;width:100%;height:100%}
+  .map .ctrl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  .map .ctrl span{width:32px;height:32px;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:18px}
+  .map .ctrl span+span{border-top:1px solid var(--line)}
+  .map .coach{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;transition:opacity .2s}
+  .map .coach .ring{width:46px;height:46px;border-radius:50%;border:2.5px solid var(--brand);background:color-mix(in srgb,var(--brand) 14%,transparent);animation:pulse 1.6s ease-out infinite}
+  .map .coach b{font-size:13px;font-weight:650;background:var(--surface);color:var(--ink);padding:6px 11px;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+  .map.placed .coach{opacity:0}
+  @keyframes pulse{0%{transform:scale(.7);opacity:1}100%{transform:scale(1.35);opacity:0}}
+  .me{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:#2a7de1;border:3px solid #fff;box-shadow:0 0 0 6px rgba(42,125,225,.22);display:none}
+  .me.on{display:block}
+  .pin{position:absolute;width:40px;height:52px;margin:-50px 0 0 -20px;display:none;cursor:grab;filter:drop-shadow(0 4px 4px rgba(0,0,0,.25));touch-action:none}
+  .pin.on{display:block}
+  .pin.drop{animation:drop .35s cubic-bezier(.3,1.6,.6,1)}
+  .pin.dragging{cursor:grabbing;transform:translateY(-10px) scale(1.06);transition:transform .12s}
+  @keyframes drop{from{transform:translateY(-24px);opacity:0}to{transform:none;opacity:1}}
+  .pin-shadow{position:absolute;width:16px;height:6px;margin:-3px 0 0 -8px;border-radius:50%;background:rgba(0,0,0,.28);display:none;pointer-events:none}
+  .pin-shadow.on{display:block}
+  .locating{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--surface) 55%,transparent);backdrop-filter:blur(2px)}
+  .locating.on{display:flex}
+  .locating span{display:flex;align-items:center;gap:8px;background:var(--surface);padding:9px 14px;border-radius:999px;font-size:14px;font-weight:600;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+
+  .spin{width:16px;height:16px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:rot .7s linear infinite;flex:none}
+  @keyframes rot{to{transform:rotate(360deg)}}
+
+  .linkbtn{background:none;border:none;color:var(--brand);cursor:pointer;padding:6px 0;font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+  .linkbtn svg{width:18px;height:18px}
+  .row-actions{display:flex;justify-content:space-between;align-items:center;margin-top:-4px}
+  .kbd-hint{font-size:12px;color:var(--ink-3)}
+
+  .addr{padding:12px 14px;display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;transition:border-color .2s,background .2s}
+  .addr .ico{width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--ink-3);flex:none;transition:all .2s}
+  .addr.set .ico{background:var(--accent-soft);color:var(--accent)}
+  .addr.bad{border-color:var(--danger);background:var(--danger-soft)}
+  .addr.bad .ico{background:var(--surface);color:var(--danger)}
+  .addr .ico svg{width:20px;height:20px}
+  .addr .txt{flex:1;min-width:0}
+  .addr strong{display:block;font-size:15px;font-weight:650}
+  .addr:not(.set) strong{color:var(--ink-3);font-weight:550}
+  .addr small{display:block;font-size:13px;color:var(--ink-2);margin-top:2px}
+  .addr.warn small{color:var(--warn)}
+  .addr.bad small{color:var(--danger)}
+
+  .btn{font-size:17px;font-weight:650;padding:16px;min-height:56px;background:var(--brand);color:#fff;border:none;border-radius:16px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 16px color-mix(in srgb,var(--brand) 35%,transparent);transition:transform .1s,background .2s}
+  .btn:active{transform:scale(.98)}
+  .btn svg{width:18px;height:18px}
+  .btn[disabled]{background:var(--surface-2);color:var(--ink-3);cursor:not-allowed;box-shadow:none;border:1px solid var(--line)}
+  .btn.busy{pointer-events:none;opacity:.9}
+  .btn.ghost{background:var(--surface);color:var(--brand);border:1.5px solid var(--brand);box-shadow:none}
+  .spacer{flex:1}
+
+  /* Details */
+  .field{display:flex;flex-direction:column;gap:8px}
+  .field-head{display:flex;justify-content:space-between;align-items:baseline}
+  label,.lab{font-size:14px;font-weight:650}
+  .opt{color:var(--ink-3);font-size:13px;font-weight:500}
+  .photo{height:180px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;border:2px dashed var(--line);border-radius:18px;cursor:pointer;position:relative;background:var(--surface-2);color:var(--ink-2);font-size:14px;overflow:hidden;transition:border-color .2s;width:100%;padding:0}
+  .photo:hover{border-color:var(--brand-2)}
+  .photo .plus{width:52px;height:52px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;margin:0 auto 4px}
+  .photo .plus svg{width:26px;height:26px}
+  .photo b{font-weight:650;color:var(--ink)}
+  .photo small{color:var(--ink-3);font-size:12.5px}
+  .preview{position:relative;height:180px;border-radius:18px;overflow:hidden;display:none;background:#2f383e}
+  .preview.on{display:block}
+  .preview img,.preview svg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .preview .tag{position:absolute;left:10px;bottom:10px;background:rgba(10,18,24,.72);color:#fff;padding:6px 10px;border-radius:10px;font-size:13px;font-weight:550;display:flex;align-items:center;gap:6px;backdrop-filter:blur(4px)}
+  .preview .tag svg{position:static;width:14px;height:14px}
+  .preview .acts{position:absolute;right:10px;top:10px;display:flex;gap:8px}
+  .preview .acts button{background:rgba(10,18,24,.72);color:#fff;border:none;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:600;cursor:pointer;backdrop-filter:blur(4px)}
+  .sample{align-self:center;font-size:13px;color:var(--ink-3);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:2px}
+  .sample[hidden]{display:none}
+  textarea{font:inherit;font-size:16px;width:100%;height:80px;padding:12px 14px;resize:none;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+  textarea::placeholder{color:var(--ink-3)}
+  textarea:focus{border-color:var(--brand-2);box-shadow:0 0 0 3px var(--brand-soft)}
+  .count{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .count.near{color:var(--warn)}
+
+  .loc-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:16px}
+  .thumb{width:54px;height:54px;border-radius:12px;overflow:hidden;flex:none;position:relative;border:1px solid var(--line)}
+  .thumb svg{width:100%;height:100%;display:block}
+  .loc-row .txt{flex:1;min-width:0}
+  .loc-row .k{font-size:12px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  .loc-row strong{display:block;font-size:15px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .loc-row .linkbtn{padding:6px 2px;font-size:14px}
+
+  /* Confirmation */
+  .hero{display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:22px}
+  .check{width:96px;height:96px;border-radius:50%;background:var(--ok-soft);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:8px}
+  .check::before{content:"";position:absolute;inset:-12px;border-radius:50%;border:2px solid var(--ok-soft)}
+  .check span{width:64px;height:64px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 8px 20px color-mix(in srgb,var(--ok) 40%,transparent)}
+  .check svg{width:32px;height:32px}
+  .screen.active .check span{animation:pop .45s cubic-bezier(.3,1.6,.6,1)}
+  .screen.active .check svg path{stroke-dasharray:30;stroke-dashoffset:30;animation:draw .4s .25s ease forwards}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  h2{margin:0;font-size:26px;font-weight:750;letter-spacing:-.02em}
+  .center{text-align:center}
+  .refbox{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--accent-soft);border:1px dashed var(--accent);border-radius:14px}
+  .refbox .k{font-size:12px;color:var(--ink-2);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  .refbox .v{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:20px;font-weight:700;letter-spacing:1.5px}
+  .refbox .txt{flex:1}
+  .copy{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:84px;justify-content:center}
+  .copy svg{width:15px;height:15px}
+  .copy.done{color:var(--ok);border-color:var(--ok)}
+  .summary{padding:2px 14px;font-size:14px;display:grid;background:var(--surface-2);border:1px solid var(--line);border-radius:16px}
+  .summary .row{display:flex;align-items:flex-start;gap:10px;padding:11px 0;color:var(--ink-2)}
+  .summary .row+.row{border-top:1px solid var(--line)}
+  .summary .row svg{width:18px;height:18px;color:var(--brand);flex:none;margin-top:1px}
+  .summary strong{color:var(--ink);font-weight:600;margin-left:auto;text-align:right;max-width:62%;overflow-wrap:anywhere}
+  .next{display:flex;gap:10px;font-size:14px;color:var(--ink-2);line-height:1.45;padding:0 2px}
+  .next svg{width:18px;height:18px;flex:none;color:var(--ink-3);margin-top:1px}
+  .note{font-size:11px;color:var(--ink-3);text-align:center;letter-spacing:.02em}
+  .homebar{width:134px;height:5px;border-radius:3px;background:var(--ink);opacity:.85;margin:0 auto 8px}
+
+  .toast{position:absolute;left:50%;bottom:34px;transform:translate(-50%,20px);background:var(--ink);color:var(--surface);font-size:14px;font-weight:600;padding:10px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:all .25s;white-space:nowrap;z-index:5}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* Round 2 additions */
+  .search{position:relative}
+  .search input{font:inherit;font-size:16px;width:100%;padding:12px 14px 12px 42px;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:14px;outline:none}
+  .search input:focus{border-color:var(--brand-2);box-shadow:0 0 0 3px var(--brand-soft)}
+  .search input::placeholder{color:var(--ink-3)}
+  .search > svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--ink-3);pointer-events:none}
+  .sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);z-index:6;overflow:hidden;display:none;margin:0;padding:4px 0;list-style:none}
+  .sugg.on{display:block}
+  .sugg li button{width:100%;text-align:left;background:none;border:none;padding:11px 14px;font-size:15px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+  .sugg li button:hover,.sugg li button:focus-visible{background:var(--surface-2)}
+  .sugg li small{color:var(--ink-3);font-size:12.5px}
+  .sugg .empty{padding:11px 14px;font-size:14px;color:var(--ink-3)}
+  .known{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--surface);border:2px solid var(--ink-3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--ink-2);pointer-events:none;box-shadow:0 2px 5px rgba(0,0,0,.18)}
+  .known.hit{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 25%,transparent)}
+  .legend{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3);margin-top:-6px}
+  .legend i{width:12px;height:12px;border-radius:50%;border:2px solid var(--ink-3);background:var(--surface);flex:none}
+  .dup{display:none;flex-direction:column;gap:10px;padding:12px 14px;border-radius:16px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+  .dup.on{display:flex}
+  .dup p{margin:0;font-size:14px;line-height:1.45;color:var(--ink)}
+  .dup p b{font-weight:700}
+  .choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .choice button{font-size:14px;font-weight:650;padding:10px 8px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;line-height:1.25}
+  .choice button[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chips button{font-size:14px;font-weight:600;padding:9px 13px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;min-height:40px}
+  .chips button[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+  .chips button .sz{display:inline-block;border-radius:50%;background:currentColor;opacity:.55;margin-right:6px;vertical-align:middle}
+  .toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:var(--surface);cursor:pointer;text-align:left;width:100%}
+  .toggle .tx{flex:1}
+  .toggle .tx b{display:block;font-size:15px;font-weight:650}
+  .toggle .tx small{display:block;font-size:13px;color:var(--ink-2);margin-top:2px}
+  .sw{width:46px;height:28px;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .2s}
+  .sw::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+  .toggle[aria-checked="true"]{border-color:var(--danger);background:var(--danger-soft)}
+  .toggle[aria-checked="true"] .sw{background:var(--danger)}
+  .toggle[aria-checked="true"] .sw::after{transform:translateX(18px)}
+  .alert{display:none;gap:10px;font-size:14px;line-height:1.45;padding:12px 14px;border-radius:14px;background:var(--danger-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--danger) 40%,transparent)}
+  .alert.on{display:flex}
+  .alert svg{width:18px;height:18px;flex:none;color:var(--danger);margin-top:1px}
+  .alert a{color:var(--danger);font-weight:700}
+  .details-scroll{display:flex;flex-direction:column;gap:16px}
+  .photo,.preview{height:150px}
+  .actions2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .actions2 .btn{font-size:15px;min-height:50px;padding:12px}
+  .timeline{display:grid;gap:0;padding:4px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:16px}
+  .timeline .t{display:flex;gap:12px;padding:10px 0;font-size:14px;color:var(--ink-2);line-height:1.4}
+  .timeline .t+.t{border-top:1px solid var(--line)}
+  .timeline .t b{color:var(--ink);font-weight:650;display:block}
+  .timeline .dot{width:24px;height:24px;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+  .timeline .dot.done{background:var(--ok);color:#fff}
+  .sec-k{font-size:12px;color:var(--ink-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:0 2px -6px}
+
+  @media (max-width:420px){body{padding:0}.phone{border-radius:0;max-width:none;min-height:100vh;min-height:100dvh;border:none;box-shadow:none}.status{display:none}.homebar{display:none}.screen{padding-top:16px}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status" aria-hidden="true">
+    <span>9:41</span><span class="island"></span>
+    <span class="sys">
+      <svg viewBox="0 0 17 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="4.5" y="5.5" width="3" height="6.5" rx="1"/><rect x="9" y="3" width="3" height="9" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg viewBox="0 0 25 12" style="width:25px"><rect x=".5" y=".5" width="21" height="11" rx="3" fill="none" style="stroke:var(--ink);opacity:.4"/><rect x="2" y="2" width="16" height="8" rx="1.5"/><rect x="22.5" y="4" width="1.8" height="4" rx=".9" style="opacity:.4"/></svg>
+    </span>
+  </div>
+
+  <!-- SCREEN 1: LOCATION -->
+  <section class="screen active" data-screen="location" aria-labelledby="h-loc">
+    <div class="bar"><h1 id="h-loc">Where is the pothole?</h1><span class="step">Step 1 of 2</span></div>
+    <div class="progress" aria-hidden="true"><i class="on"></i><i></i></div>
+    <p class="hint">Search an address or tap the spot on the street. Drag the pin to fine-tune it.</p>
+
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" autocomplete="off" placeholder="Search a street or address" aria-label="Search a street or address" aria-controls="sugg" aria-expanded="false">
+      <ul class="sugg" id="sugg" role="listbox" aria-label="Address suggestions"></ul>
+    </div>
+
+    <div class="map" id="map" tabindex="0" role="application" aria-label="Map. Tap to place a pin. With the keyboard, press Enter to drop a pin and use the arrow keys to move it.">
+      <svg class="tiles" id="tiles" viewBox="0 0 350 280" preserveAspectRatio="none" aria-hidden="true">
+        <rect width="350" height="280" style="fill:var(--block)"/>
+        <rect x="196" y="16" width="122" height="72" rx="8" style="fill:var(--park)"/>
+        <path id="water" d="M0 232 C 80 214, 140 256, 220 240 S 330 220, 350 230 L350 280 L0 280Z" style="fill:var(--water)"/>
+        <g stroke-linecap="round" fill="none" style="stroke:var(--road-edge)">
+          <path d="M-10 108 H360" stroke-width="19"/><path d="M-10 192 H360" stroke-width="13"/>
+          <path d="M60 -10 V236" stroke-width="13"/><path d="M172 -10 V242" stroke-width="21"/><path d="M282 -10 V226" stroke-width="13"/>
+          <path d="M-10 40 L120 160 L210 262" stroke-width="11"/>
+          <path d="M20 150 H340" stroke-width="8"/>
+        </g>
+        <g stroke-linecap="round" fill="none" style="stroke:var(--road)">
+          <path d="M-10 108 H360" stroke-width="16"/><path d="M-10 192 H360" stroke-width="10"/>
+          <path d="M60 -10 V236" stroke-width="10"/><path d="M172 -10 V242" stroke-width="18"/><path d="M282 -10 V226" stroke-width="10"/>
+          <path d="M-10 40 L120 160 L210 262" stroke-width="8"/>
+          <path d="M20 150 H340" stroke-width="5"/>
+        </g>
+        <path d="M172 -10 V242" style="stroke:var(--accent)" stroke-width="1.6" stroke-dasharray="6 8" opacity=".5"/>
+        <g style="fill:var(--label)" font-size="8" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-weight="650" letter-spacing=".6">
+          <text x="84" y="104">MAIN ST</text>
+          <text x="178" y="20" transform="rotate(90 178 20)">OAK AVE</text>
+          <text x="66" y="20" transform="rotate(90 66 20)">ELM ST</text>
+          <text x="288" y="112" transform="rotate(90 288 112)">PINE ST</text>
+          <text x="226" y="147">CEDAR LN</text>
+          <text x="232" y="188">RIVER RD</text>
+          <text x="214" y="56">RIVERSIDE PARK</text>
+          <text x="40" y="262" opacity=".8">MILL RIVER</text>
+        </g>
+      </svg>
+      <div class="coach" id="coach"><div class="ring"></div><b>Tap the pothole&rsquo;s spot</b></div>
+      <div class="ctrl" aria-hidden="true"><span>+</span><span>&minus;</span></div>
+      <div class="known" id="k0" aria-hidden="true">!</div>
+      <div class="known" id="k1" aria-hidden="true">!</div>
+      <div class="me" id="me" aria-hidden="true"></div>
+      <div class="pin-shadow" id="pinShadow"></div>
+      <svg class="pin" id="pin" viewBox="0 0 40 52" aria-hidden="true">
+        <path d="M20 1C9.5 1 1 9.3 1 19.6 1 33 20 51 20 51s19-18 19-31.4C39 9.3 30.5 1 20 1z" style="fill:var(--accent)" stroke="#fff" stroke-width="2"/>
+        <circle cx="20" cy="19.5" r="7.5" fill="#fff"/><circle cx="20" cy="19.5" r="3.5" style="fill:var(--accent)"/>
+      </svg>
+      <div class="locating" id="locating"><span><i class="spin" style="color:var(--brand)"></i>Finding you&hellip;</span></div>
+    </div>
+
+    <div class="row-actions">
+      <button class="linkbtn" id="useLoc" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        Use my location
+      </button>
+      <span class="kbd-hint" id="dragHint" hidden>Drag pin to adjust</span>
+    </div>
+    <div class="legend"><i></i>Potholes neighbors have already reported</div>
+
+    <div class="addr" id="addrCard" aria-live="polite">
+      <div class="ico" id="addrIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+      <div class="txt">
+        <strong id="addrText">No spot marked yet</strong>
+        <small id="addrSub">The nearest address will appear here.</small>
+      </div>
+    </div>
+
+    <div class="dup" id="dup" aria-live="polite">
+      <p id="dupText">A pothole was already reported here.</p>
+      <div class="choice" role="group" aria-label="Is this the same pothole?">
+        <button type="button" id="dupSame" aria-pressed="true">Same one: add my confirmation</button>
+        <button type="button" id="dupNew" aria-pressed="false">Different pothole</button>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <button class="btn" id="toDetails" type="button" disabled>Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+  </section>
+
+  <!-- SCREEN 2: DETAILS + SUBMIT -->
+  <section class="screen" data-screen="details" aria-labelledby="h-det">
+    <div class="bar">
+      <button class="back" type="button" data-back aria-label="Back to location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1 id="h-det">Describe the pothole</h1><span class="step">Step 2 of 2</span>
+    </div>
+    <div class="progress" aria-hidden="true"><i class="on"></i><i class="on"></i></div>
+
+    <div class="loc-row">
+      <div class="thumb" aria-hidden="true"><svg id="thumb1" viewBox="0 0 54 54"></svg></div>
+      <div class="txt"><span class="k">Location</span><strong id="sumAddr">-</strong></div>
+      <button class="linkbtn" type="button" data-back>Change</button>
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="lab" id="photoLab">Photo <span class="opt">(optional)</span></span></div>
+      <input type="file" id="file" accept="image/*" capture="environment" class="sr" tabindex="-1" aria-hidden="true">
+      <button class="photo" id="photoBtn" type="button" aria-labelledby="photoLab photoCta">
+        <span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+        <b id="photoCta">Take or choose a photo</b>
+        <small>A clear shot helps crews judge size and depth</small>
+      </button>
+      <div class="preview" id="preview">
+        <img id="previewImg" alt="Your pothole photo" hidden>
+        <svg id="sampleShot" viewBox="0 0 350 180" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Sample pothole photo" hidden>
+          <defs>
+            <linearGradient id="asph" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d6a72"/><stop offset="1" stop-color="#2f383e"/></linearGradient>
+            <radialGradient id="hole" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#14191c"/><stop offset=".7" stop-color="#252c31"/><stop offset="1" stop-color="#3d474e"/></radialGradient>
+          </defs>
+          <rect width="350" height="180" fill="url(#asph)"/>
+          <path d="M120 0 L112 180" stroke="#e9c34a" stroke-width="5" stroke-dasharray="26 18" opacity=".85"/>
+          <ellipse cx="226" cy="108" rx="72" ry="32" fill="url(#hole)"/>
+          <path d="M156 104 l-14 -8 M292 102 l16 -6 M222 78 l4 -14 M240 139 l8 12" stroke="#1b2125" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="226" cy="115" rx="44" ry="12" fill="#3c5664" opacity=".55"/>
+        </svg>
+        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Photo added</span>
+        <div class="acts"><button type="button" id="retake">Retake</button><button type="button" id="removePhoto" aria-label="Remove photo">Remove</button></div>
+      </div>
+      <button class="sample" type="button" id="useSample">No photo handy? Use a sample (prototype only)</button>
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="lab" id="sizeLab">How big is it? <span class="opt">(optional)</span></span></div>
+      <div class="chips" role="group" aria-labelledby="sizeLab" data-group="size">
+        <button type="button" aria-pressed="false" data-v="Small (fist-sized)"><span class="sz" style="width:7px;height:7px"></span>Fist</button>
+        <button type="button" aria-pressed="false" data-v="Medium (dinner plate)"><span class="sz" style="width:11px;height:11px"></span>Dinner plate</button>
+        <button type="button" aria-pressed="false" data-v="Large (car tire or bigger)"><span class="sz" style="width:15px;height:15px"></span>Car tire+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="lab" id="whereLab">Where on the road? <span class="opt">(optional)</span></span></div>
+      <div class="chips" role="group" aria-labelledby="whereLab" data-group="where">
+        <button type="button" aria-pressed="false" data-v="Driving lane">Driving lane</button>
+        <button type="button" aria-pressed="false" data-v="Bike lane">Bike lane</button>
+        <button type="button" aria-pressed="false" data-v="Crosswalk">Crosswalk</button>
+        <button type="button" aria-pressed="false" data-v="Curb or shoulder">Curb / shoulder</button>
+      </div>
+    </div>
+
+    <button class="toggle" id="hazard" type="button" role="switch" aria-checked="false">
+      <span class="tx"><b>It&rsquo;s a danger right now</b><small>Deep enough to damage a car or cause a fall</small></span>
+      <span class="sw" aria-hidden="true"></span>
+    </button>
+    <div class="alert" id="hazardAlert" role="note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <span>We&rsquo;ll flag this for priority review. If someone is hurt or a car is stuck, call <a href="tel:911">911</a>.</span>
+    </div>
+
+    <div class="field">
+      <div class="field-head"><label for="note">Anything crews should know? <span class="opt">(optional)</span></label><span class="count" id="count">0/140</span></div>
+      <textarea id="note" maxlength="140" placeholder="e.g. Right-hand lane, just past the crosswalk"></textarea>
+    </div>
+
+    <div class="spacer"></div>
+    <button class="btn" id="submit" type="button"><span id="submitLabel">Send report</span> <svg id="submitIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+  </section>
+
+  <!-- SCREEN 3: CONFIRMATION -->
+  <section class="screen" data-screen="confirmation" aria-labelledby="h-done">
+    <div class="hero">
+      <div class="check"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span></div>
+      <h2 class="center" id="h-done" tabindex="-1">Report sent</h2>
+      <p class="hint center" id="doneSub">Thank you. The city&rsquo;s street maintenance team has your report.</p>
+    </div>
+
+    <div class="refbox">
+      <div class="txt"><div class="k">Reference number</div><div class="v" id="refNo">PH-0000</div></div>
+      <button class="copy" type="button" id="copyRef"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button>
+    </div>
+
+    <div class="summary">
+      <span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Location</span> <strong id="cAddr">-</strong></span>
+      <span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>Photo</span> <strong id="cPhoto">None</strong></span>
+      <span class="row" id="cSizeRow" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><span>Size</span> <strong id="cSize"></strong></span>
+      <span class="row" id="cWhereRow" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3L4 21M16 3l4 18M12 5v2M12 11v2M12 17v2"/></svg><span>Position</span> <strong id="cWhere"></strong></span>
+      <span class="row" id="cHazRow" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--danger)"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><span>Priority</span> <strong>Flagged as dangerous</strong></span>
+      <span class="row" id="cNoteRow" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 10h16M4 15h10"/></svg><span>Note</span> <strong id="cNote"></strong></span>
+    </div>
+
+    <p class="sec-k">What happens next</p>
+    <div class="timeline">
+      <div class="t"><span class="dot done">&#10003;</span><span><b>Received</b>Your report is in the street maintenance queue.</span></div>
+      <div class="t"><span class="dot">2</span><span><b id="tInspect">Inspection</b><span id="tInspectSub">A crew checks the spot, usually within 5 business days.</span></span></div>
+      <div class="t"><span class="dot">3</span><span><b>Repair</b>Most potholes are patched within 2 to 3 weeks of inspection, weather permitting.</span></div>
+    </div>
+
+    <div class="next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Keep the reference number if you contact the city about this pothole. Share it with neighbors so they can confirm it instead of filing a duplicate.</span></div>
+
+    <div class="spacer"></div>
+    <div class="actions2">
+      <button class="btn ghost" id="share" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Share</button>
+      <button class="btn ghost" id="again" type="button">Report another</button>
+    </div>
+    <div class="note">Prototype &middot; sample map and addresses</div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="homebar" aria-hidden="true"></div>
+</div>
+
+<script>
+(function(){
+  var VW=350,VH=280;
+  function fresh(){return {pt:null,addr:null,ok:false,photo:null,size:null,where:null,hazard:false,dup:null,same:true}}
+  var state=fresh();
+  var known=[
+    {x:112,y:108,ref:'PH-0928-214',addr:'136 Main St',n:3,ago:'8 days ago'},
+    {x:172,y:58,ref:'PH-1002-087',addr:'518 Oak Ave',n:1,ago:'4 days ago'}
+  ];
+  function $(id){return document.getElementById(id)}
+
+  /* ---------- Street model (in map viewBox units) ---------- */
+  var roads=[
+    {n:'Main St',t:'h',v:108,w:8,a:0,b:350,base:100},
+    {n:'River Rd',t:'h',v:192,w:5,a:0,b:350,base:400},
+    {n:'Cedar Ln',t:'h',v:150,w:3,a:20,b:340,base:700},
+    {n:'Elm St',t:'v',v:60,w:5,a:0,b:236,base:200},
+    {n:'Oak Ave',t:'v',v:172,w:9,a:0,b:242,base:500},
+    {n:'Pine St',t:'v',v:282,w:5,a:0,b:226,base:300},
+    {n:'Harbor Way',t:'s',p:[[-10,40],[120,160],[210,262]],w:4,base:900}
+  ];
+  function segDist(px,py,x1,y1,x2,y2){
+    var dx=x2-x1,dy=y2-y1,t=((px-x1)*dx+(py-y1)*dy)/(dx*dx+dy*dy);t=Math.max(0,Math.min(1,t));
+    var cx=x1+t*dx,cy=y1+t*dy;return {d:Math.hypot(px-cx,py-cy),t:t};
+  }
+  function roadDist(r,x,y){
+    if(r.t==='h'){var cx=Math.max(r.a,Math.min(r.b,x));return {d:Math.hypot(x-cx,y-r.v),pos:cx};}
+    if(r.t==='v'){var cy=Math.max(r.a,Math.min(r.b,y));return {d:Math.hypot(x-r.v,y-cy),pos:cy};}
+    var best={d:1e9,pos:0};
+    for(var i=0;i<r.p.length-1;i++){var s=segDist(x,y,r.p[i][0],r.p[i][1],r.p[i+1][0],r.p[i+1][1]);if(s.d<best.d)best={d:s.d,pos:(i+s.t)*160};}
+    return best;
+  }
+  function inWater(x,y){
+    var w=$('water');
+    try{ if(w.isPointInFill){var p=$('tiles').createSVGPoint();p.x=x;p.y=y;return w.isPointInFill(p);} }catch(e){}
+    return y>232+10*Math.sin(x/55);
+  }
+  function inPark(x,y){return x>196&&x<318&&y>16&&y<88}
+  function describe(x,y){
+    if(inWater(x,y))return {ok:false,level:'bad',title:'That spot is in the river',sub:'Move the pin onto a street.'};
+    var ds=roads.map(function(r){var d=roadDist(r,x,y);return {r:r,d:d.d-r.w,pos:d.pos}}).sort(function(a,b){return a.d-b.d});
+    var a=ds[0],b=ds[1];
+    if(a.d>22){
+      if(inPark(x,y))return {ok:true,level:'warn',title:'Inside Riverside Park',sub:'Park paths are fine. For a street, drag the pin onto the road.'};
+      return {ok:true,level:'warn',title:'Near '+a.r.n,sub:'This looks off the road. Drag the pin onto the street if you can.'};
+    }
+    if(b.d<10&&b.r!==a.r)return {ok:true,level:'',title:a.r.n+' & '+b.r.n,sub:'Intersection'};
+    var num=a.r.base+Math.round(a.pos/6)*2;
+    return {ok:true,level:'',title:num+' '+a.r.n,sub:'Approximate address'};
+  }
+
+  /* ---------- Map + pin ---------- */
+  var map=$('map'),pin=$('pin'),sh=$('pinShadow');
+  function toView(px,py){return {x:px/map.clientWidth*VW,y:py/map.clientHeight*VH}}
+  function toPx(p){return {x:p.x/VW*map.clientWidth,y:p.y/VH*map.clientHeight}}
+  function placeKnown(){known.forEach(function(k,i){var el=$('k'+i),p=toPx(k);el.style.left=p.x+'px';el.style.top=p.y+'px';})}
+  function render(drop){
+    placeKnown();
+    if(!state.pt){$('dup').classList.remove('on');return;}
+    var px=toPx(state.pt);
+    pin.style.left=px.x+'px';pin.style.top=px.y+'px';sh.style.left=px.x+'px';sh.style.top=px.y+'px';
+    pin.classList.add('on');sh.classList.add('on');map.classList.add('placed');$('dragHint').hidden=false;
+    if(drop){pin.classList.remove('drop');void pin.getBoundingClientRect();pin.classList.add('drop');if(navigator.vibrate)try{navigator.vibrate(10)}catch(e){}}
+    var d=describe(state.pt.x,state.pt.y);state.addr=d.title;state.ok=d.ok;
+    var card=$('addrCard');card.className='addr set'+(d.level?' '+d.level:'');
+    $('addrText').textContent=d.title;$('addrSub').textContent=d.sub;
+    var hit=null;known.forEach(function(k,i){$('k'+i).classList.remove('hit');if(Math.hypot(k.x-state.pt.x,k.y-state.pt.y)<16)hit=i;});
+    if(hit!==state.dup){state.dup=hit;state.same=true;}
+    var dp=$('dup');
+    if(hit!==null&&d.ok){
+      var k=known[hit];$('k'+hit).classList.add('hit');
+      $('dupText').innerHTML='<b>Already reported here</b> '+k.ago+' ('+k.ref+'). '+(k.n===1?'1 neighbor has':k.n+' neighbors have')+' confirmed it. Is this the same pothole?';
+      dp.classList.add('on');$('dupSame').setAttribute('aria-pressed',state.same);$('dupNew').setAttribute('aria-pressed',!state.same);
+    } else dp.classList.remove('on');
+    $('toDetails').disabled=!d.ok;
+  }
+  $('dupSame').addEventListener('click',function(){state.same=true;render(false)});
+  $('dupNew').addEventListener('click',function(){state.same=false;render(false)});
+  function isDup(){return state.dup!==null&&state.same}
+
+  /* ---------- Address search ---------- */
+  var places=[];
+  roads.forEach(function(r){
+    if(r.t==='s'){places.push({t:'200 '+r.n,x:70,y:110});places.push({t:'260 '+r.n,x:140,y:183});return;}
+    [0.25,0.5,0.75].forEach(function(f){var pos=r.a+(r.b-r.a)*f,num=r.base+Math.round(pos/6)*2;
+      places.push(r.t==='h'?{t:num+' '+r.n,x:pos,y:r.v}:{t:num+' '+r.n,x:r.v,y:pos});});
+  });
+  [['Main St','Oak Ave',172,108],['Main St','Elm St',60,108],['River Rd','Oak Ave',172,192],['Cedar Ln','Pine St',282,150],['Main St','Pine St',282,108]].forEach(function(a){places.push({t:a[0]+' & '+a[1],x:a[2],y:a[3],ix:true})});
+  var q=$('q'),sg=$('sugg');
+  function showSugg(){
+    var v=q.value.trim().toLowerCase();
+    if(!v){sg.classList.remove('on');q.setAttribute('aria-expanded','false');return;}
+    var m=places.filter(function(p){return p.t.toLowerCase().indexOf(v)>-1}).slice(0,5);
+    sg.innerHTML=m.length?m.map(function(p,i){return '<li role="option"><button type="button" data-i="'+places.indexOf(p)+'"><span>'+p.t+'</span><small>'+(p.ix?'Intersection':'Address')+'</small></button></li>'}).join(''):'<li class="empty">No match in this area. Try a street name, or tap the map.</li>';
+    sg.classList.add('on');q.setAttribute('aria-expanded','true');
+  }
+  q.addEventListener('input',showSugg);
+  q.addEventListener('focus',showSugg);
+  q.addEventListener('keydown',function(e){if(e.key==='Escape'){sg.classList.remove('on')}if(e.key==='Enter'){var b=sg.querySelector('button');if(b){e.preventDefault();b.click();}}});
+  sg.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var p=places[+b.dataset.i];
+    q.value=p.t;sg.classList.remove('on');q.setAttribute('aria-expanded','false');placeAtView(p.x,p.y-1,true);toast('Pin placed. Drag it to the exact spot.');});
+  document.addEventListener('pointerdown',function(e){if(!e.target.closest('.search'))sg.classList.remove('on')});
+  function placeAtView(x,y,drop){
+    state.pt={x:Math.max(4,Math.min(VW-4,x)),y:Math.max(10,Math.min(VH-4,y))};render(drop);
+  }
+  function evtPt(e){var r=map.getBoundingClientRect();return toView(e.clientX-r.left,e.clientY-r.top)}
+
+  var dragging=false,moved=false,startedOnPin=false;
+  map.addEventListener('pointerdown',function(e){
+    if(e.button>0)return;
+    startedOnPin=(e.target.closest&&e.target.closest('#pin'))!==null;
+    dragging=true;moved=false;
+    try{map.setPointerCapture(e.pointerId)}catch(_){}
+    if(startedOnPin)pin.classList.add('dragging');
+  });
+  map.addEventListener('pointermove',function(e){
+    if(!dragging)return;
+    if(startedOnPin){moved=true;var p=evtPt(e);placeAtView(p.x,p.y,false);}
+  });
+  map.addEventListener('pointerup',function(e){
+    if(!dragging)return;dragging=false;pin.classList.remove('dragging');
+    if(!startedOnPin){var p=evtPt(e);placeAtView(p.x,p.y,true);}
+  });
+  map.addEventListener('pointercancel',function(){dragging=false;pin.classList.remove('dragging')});
+  map.addEventListener('keydown',function(e){
+    var step=e.shiftKey?20:5;
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();if(!state.pt)placeAtView(VW/2,VH/2,true);else if(state.ok)$('toDetails').click();return;}
+    var k={ArrowUp:[0,-step],ArrowDown:[0,step],ArrowLeft:[-step,0],ArrowRight:[step,0]}[e.key];
+    if(!k)return;e.preventDefault();
+    if(!state.pt){placeAtView(VW/2,VH/2,true);return;}
+    placeAtView(state.pt.x+k[0],state.pt.y+k[1],false);
+  });
+  window.addEventListener('resize',function(){placeKnown();render(false);var m=$('me');if(m.dataset.x){var p=toPx({x:+m.dataset.x,y:+m.dataset.y});m.style.left=p.x+'px';m.style.top=p.y+'px';}});
+
+  $('useLoc').addEventListener('click',function(){
+    var L=$('locating');L.classList.add('on');this.disabled=true;var self=this;
+    setTimeout(function(){
+      L.classList.remove('on');self.disabled=false;
+      var me={x:166,y:126},m=$('me'),p=toPx(me);
+      m.dataset.x=me.x;m.dataset.y=me.y;m.style.left=p.x+'px';m.style.top=p.y+'px';m.classList.add('on');
+      placeAtView(me.x+6,me.y-12,true);
+      toast('Pin placed at your location. Drag to adjust.');
+    },900);
+  });
+
+  /* ---------- Navigation ---------- */
+  var order=['location','details','confirmation'];var cur='location';
+  function go(name){
+    var rev=order.indexOf(name)<order.indexOf(cur);cur=name;
+    document.querySelectorAll('.screen').forEach(function(s){
+      var on=s.dataset.screen===name;s.classList.toggle('active',on);s.classList.toggle('rev',on&&rev);
+    });
+    if(name==='details'){$('sumAddr').textContent=state.addr;drawThumb($('thumb1'));
+      $('h-det').textContent=isDup()?'Confirm it\u2019s still there':'Describe the pothole';
+      $('submitLabel').textContent=isDup()?'Add my confirmation':'Send report';}
+    if(name==='location')setTimeout(function(){render(false)},0);
+    var h=document.querySelector('.screen.active h1,.screen.active h2');if(h){h.setAttribute('tabindex','-1');h.focus({preventScroll:true});}
+  }
+  $('toDetails').addEventListener('click',function(){if(state.ok)go('details')});
+  document.querySelectorAll('[data-back]').forEach(function(b){b.addEventListener('click',function(){go('location')})});
+
+  function drawThumb(svg){
+    var cx=state.pt.x,cy=state.pt.y,s=54,sc=1.6,x0=cx-s/sc/2,y0=cy-s/sc/2;
+    svg.setAttribute('viewBox',x0+' '+y0+' '+(s/sc)+' '+(s/sc));
+    svg.innerHTML='';
+    var src=$('tiles');
+    for(var i=0;i<src.childNodes.length;i++){var n=src.childNodes[i];if(n.nodeType===1&&n.tagName.toLowerCase()!=='g'||(n.nodeType===1&&n.querySelector&&!n.querySelector('text')))svg.appendChild(n.cloneNode(true));}
+    var w=svg.querySelector('#water');if(w)w.removeAttribute('id');
+    var ns='http://www.w3.org/2000/svg',c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',4.5);c.setAttribute('stroke','#fff');c.setAttribute('stroke-width','1.6');c.style.fill='var(--accent)';
+    svg.appendChild(c);
+  }
+
+  /* ---------- Photo ---------- */
+  var file=$('file');
+  function showPhoto(kind,url){
+    state.photo=kind;
+    $('previewImg').hidden=kind!=='real';$('sampleShot').hidden=kind!=='sample';
+    if(kind==='real')$('previewImg').src=url;
+    $('preview').classList.add('on');$('photoBtn').hidden=true;$('useSample').hidden=true;
+    
+  }
+  function clearPhoto(){
+    state.photo=null;var img=$('previewImg');if(img.src&&img.src.indexOf('blob:')===0)URL.revokeObjectURL(img.src);img.removeAttribute('src');
+    $('preview').classList.remove('on');$('photoBtn').hidden=false;$('useSample').hidden=false;file.value='';
+    
+  }
+  $('photoBtn').addEventListener('click',function(){file.click()});
+  $('retake').addEventListener('click',function(){file.click()});
+  file.addEventListener('change',function(){
+    var f=file.files&&file.files[0];if(!f)return;
+    if(!/^image\//.test(f.type)){toast('That file isn’t a photo.');return;}
+    clearPhoto();showPhoto('real',URL.createObjectURL(f));
+  });
+  $('useSample').addEventListener('click',function(){showPhoto('sample')});
+  $('removePhoto').addEventListener('click',function(){clearPhoto();$('photoBtn').focus()});
+
+  var note=$('note');
+  note.addEventListener('input',function(){var n=note.value.length,c=$('count');c.textContent=n+'/140';c.classList.toggle('near',n>=120)});
+
+  /* ---------- Size, position, hazard ---------- */
+  document.querySelectorAll('.chips').forEach(function(g){
+    g.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var key=g.dataset.group,on=b.getAttribute('aria-pressed')!=='true';
+      g.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed','false')});
+      if(on)b.setAttribute('aria-pressed','true');state[key]=on?b.dataset.v:null;});
+  });
+  function setHazard(v){state.hazard=v;$('hazard').setAttribute('aria-checked',v);$('hazardAlert').classList.toggle('on',v)}
+  $('hazard').addEventListener('click',function(){setHazard(!state.hazard)});
+
+  /* ---------- Submit ---------- */
+  $('submit').addEventListener('click',function(){
+    var b=this;b.classList.add('busy');b.setAttribute('aria-busy','true');
+    $('submitLabel').textContent='Sending…';$('submitIco').outerHTML='<i class="spin" id="submitIco"></i>';
+    setTimeout(function(){
+      var d=new Date(),ref='PH-'+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(Math.floor(100+Math.random()*900));
+      var dupK=isDup()?known[state.dup]:null;
+      if(dupK){ref=dupK.ref;dupK.n++;}
+      $('refNo').textContent=ref;
+      $('h-done').textContent=dupK?'Confirmation added':'Report sent';
+      $('doneSub').textContent=dupK?'Thanks. You\u2019re the '+ord(dupK.n+1)+' resident to report this pothole, which helps the city prioritize it.':'Thank you. The city\u2019s street maintenance team has your report.';
+      $('tInspect').textContent=state.hazard?'Priority inspection':'Inspection';
+      $('tInspectSub').textContent=state.hazard?'Reports flagged as dangerous are checked within 24 hours.':'A crew checks the spot, usually within 5 business days.';
+      $('cSizeRow').hidden=!state.size;$('cSize').textContent=state.size||'';
+      $('cWhereRow').hidden=!state.where;$('cWhere').textContent=state.where||'';
+      $('cHazRow').hidden=!state.hazard;
+      $('cAddr').textContent=state.addr;
+      $('cPhoto').textContent=state.photo?'1 attached':'None';
+      var t=note.value.trim();$('cNoteRow').hidden=!t;$('cNote').textContent=t?'“'+t+'”':'';
+      b.classList.remove('busy');b.removeAttribute('aria-busy');
+      $('submitLabel').textContent=isDup()?'Add my confirmation':'Send report';
+      $('submitIco').outerHTML='<svg id="submitIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>';
+      go('confirmation');
+    },1100);
+  });
+
+  /* ---------- Confirmation ---------- */
+  $('copyRef').addEventListener('click',function(){
+    var b=this,txt=$('refNo').textContent;
+    function done(){b.classList.add('done');b.querySelector('span').textContent='Copied';setTimeout(function(){b.classList.remove('done');b.querySelector('span').textContent='Copy'},1800)}
+    try{navigator.clipboard.writeText(txt).then(done,done)}catch(e){done()}
+  });
+  function ord(n){var s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
+  $('share').addEventListener('click',function(){
+    var txt='I reported a pothole at '+state.addr+' to the city (ref '+$('refNo').textContent+'). If you see it too, add your confirmation.';
+    if(navigator.share){navigator.share({title:'Pothole report',text:txt}).catch(function(){})}
+    else{try{navigator.clipboard.writeText(txt).then(function(){toast('Share message copied')},function(){toast('Share message copied')})}catch(e){toast('Share message copied')}}
+  });
+  $('again').addEventListener('click',function(){
+    state=fresh();q.value='';setHazard(false);
+    document.querySelectorAll('.chips button').forEach(function(x){x.setAttribute('aria-pressed','false')});
+    known.forEach(function(k,i){$('k'+i).classList.remove('hit')});$('dup').classList.remove('on');
+    pin.classList.remove('on','drop');sh.classList.remove('on');map.classList.remove('placed');$('me').classList.remove('on');$('dragHint').hidden=true;
+    $('addrCard').className='addr';$('addrText').textContent='No spot marked yet';$('addrSub').textContent='The nearest address will appear here.';
+    $('toDetails').disabled=true;clearPhoto();note.value='';$('count').textContent='0/140';$('count').classList.remove('near');
+    go('location');
+  });
+
+  requestAnimationFrame(placeKnown);
+  var tt;function toast(m){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('on')},2400)}
+})();
+</script>
+</body>
+</html>

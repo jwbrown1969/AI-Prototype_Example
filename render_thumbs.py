@@ -22,6 +22,12 @@ JOBS = {
     "D3": ("D3_address_first.html", [None]),
     "B": ("B_unscoped_sketch.html", [None]),
     "F": ("F_scoped_three_fidelities.html", ["sketch", "wireframe", "polished"]),
+    "U1": ("U1_unscoped_round1.html", [None]),
+    "U2": ("U2_unscoped_round2.html", [None]),
+    "U3": ("U3_unscoped_round3.html", [None]),
+    "S1": ("S1_scoped_round1.html", [None]),
+    "S2": ("S2_scoped_round2.html", [None]),
+    "S3": ("S3_scoped_round3.html", [None]),
 }
 
 ELEMENT_SHOTS = {"B"}
@@ -48,11 +54,16 @@ SHOW = """
 """
 
 
+ONLY = None  # set to a list of run names to render a subset
+
+
 async def main():
     async with async_playwright() as pw:
         browser = await pw.chromium.launch()
         page = await browser.new_page(viewport={"width": 390, "height": 760}, device_scale_factor=2)
         for run, (fname, fids) in JOBS.items():
+            if ONLY and run not in ONLY:
+                continue
             await page.goto((SRC / fname).as_uri())
             await page.wait_for_timeout(300)
             names = await page.eval_on_selector_all("section[data-screen]", "els => els.map(e => e.dataset.screen)")

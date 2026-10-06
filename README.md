@@ -1,8 +1,8 @@
-# AI Prototype Example: one pothole app, nine prompts
+# AI Prototype Example: one pothole app, nine prompts and six follow-up rounds
 
 Companion demonstration for the Human Factors Brief article "Scope Is the Skill."
 
-The argument it supports: overdesign in AI prototyping follows the prompt. Given no scope, a model fills in a full product; given a stated task, a screen limit, and what is out of scope, it builds the small thing. Fidelity can then be set by prompt in either direction, including as a switch inside a single build.
+The argument it supports: overdesign in AI prototyping follows the prompt. Given no scope, a model fills in a full product; given a stated task, a screen limit, and what is out of scope, it builds the small thing. Given the same generic follow-ups ("make it better"), the unscoped build grew from 11 screens to 26 while the scoped build stayed at 3. Fidelity can then be set by prompt in either direction, including as a switch inside a single build.
 
 Open `index.html` for the guided page. Each prototype in `prototypes/` was generated on October 5 and 6, 2026 by a general-purpose AI model, each in its own session. Runs A, C, D1–D3, and F were fresh generations. B and B2 were each given A's file to re-render, and E was given C's file to re-render; none saw anything else. The prototypes are unedited. Exact prompts, including the technical block every prompt shared, are in `prompts.md`.
 
@@ -17,12 +17,16 @@ Open `index.html` for the guided page. Each prototype in `prototypes/` was gener
 | D1–D3 | Same scope, three different starting points, sketch | 3 each | n/a | 57 s, 45 s, 42 s |
 | E | C re-rendered as a polished interface, keeping every label and line of copy | 3 | 100% | 105 s |
 | F | Scoped, with sketch, wireframe, and polished switchable in one build | 3 | n/a | 151 s |
+| U1–U3 | A, then three follow-ups (see prompts.md) | 12, 18, 26 | n/a | 479, 801, 1,510 s |
+| S1–S3 | E, then the same three follow-ups, with the scoped request remembered | 3, 3, 3 | n/a | 167, 199, 441 s |
 
 Every prompt, scoped or not, ended with the same technical block, which includes "Do not ask questions; make your own decisions." Apart from C's rendering instruction (a hand-drawn grayscale wireframe), scope was the only difference between the prompts for A and C.
 
 Unrequested additions in the scoped builds: C, D1, and D2 each added an optional note field; D1 added an address search and "No account needed"; D3 added an optional rough-size choice; E added street labels and zoom buttons to the map; F added street labels to the map and a line of helper text on the photo step. Placeholder text varied: D2 filled its body copy with lorem ipsum, and C and E use it in the note field's placeholder.
 
 F's three fidelities share one set of screens and one set of words: the switch changes a single style attribute on the page, so changing fidelity cannot change content.
+
+Follow-up rounds: the scoped arm held at 3 screens but grew within them, from about 70 words to about 330, adding size and position questions, a marker for already-reported potholes, a photo privacy note, keyboard pin placement, and a "What happens next" timeline on the confirmation screen, which sits close to the excluded status tracking. Times for the follow-up rounds include the model testing its own build and are not comparable with the first-request runs.
 
 ## Reproducing the counts
 

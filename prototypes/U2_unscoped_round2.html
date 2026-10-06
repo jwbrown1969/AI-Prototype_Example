@@ -1,0 +1,1812 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Street Fix Pothole Reporter</title>
+<style>
+:root{
+  --asphalt:#1d2125; --asphalt-2:#2a3036; --ink:#14171a; --muted:#56606a; --line:#e3e6ea;
+  --paper:#f6f5f1; --card:#ffffff; --signal:#ffc928; --signal-ink:#3a2d00; --go:#1f9d61;
+  --warn:#d9531a; --blue:#2463d6; --danger:#c62828; --radius:16px;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(0,0,0,.08);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:#cfd3d6;color:var(--ink);display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:8px}
+.device{width:390px;height:844px;background:var(--paper);border-radius:44px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #111,0 30px 80px rgba(0,0,0,.35)}
+@media (max-width:480px){body{background:var(--paper)}.device{width:100vw;height:100dvh;border-radius:0;box-shadow:none}}
+.statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:14px;font-weight:600;position:absolute;top:0;left:0;right:0;z-index:30;pointer-events:none}
+.statusbar.light{color:#fff}
+@media (max-width:480px){.statusbar{display:none}}
+
+.screen{position:absolute;inset:0;display:none;flex-direction:column;background:var(--paper);padding-top:44px}
+@media (max-width:480px){.screen{padding-top:0}}
+.screen.active{display:flex;animation:in .22s ease}
+.screen.active.back{animation:inBack .22s ease}
+@keyframes in{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes inBack{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pad{padding:0 20px}
+
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 12px;min-height:56px}
+.topbar h2{font-size:17px;font-weight:700;flex:1;text-align:center}
+.topbar .spacer{width:44px}
+.icon-btn{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:none}
+.icon-btn:active{background:rgba(0,0,0,.06)}
+.steps{display:flex;gap:6px;padding:0 20px 4px}
+.steps i{flex:1;height:4px;border-radius:4px;background:var(--line)}
+.steps i.on{background:var(--asphalt)}
+.step-label{font-size:12px;color:var(--muted);font-weight:600;padding:4px 20px 12px}
+
+h1{font-size:28px;line-height:1.15;letter-spacing:-.02em}
+.lead{color:var(--muted);font-size:15px;line-height:1.5}
+.label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border-radius:14px;font-weight:700;font-size:16px;width:100%;transition:transform .08s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--asphalt);color:#fff}
+.btn-signal{background:var(--signal);color:var(--signal-ink)}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{height:40px;font-size:14px;border-radius:12px;padding:0 14px;width:auto}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.footer{padding:12px 20px 26px;background:linear-gradient(transparent,var(--paper) 30%)}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
+.link{color:var(--blue);font-weight:700;font-size:14px}
+
+/* Welcome */
+[data-screen="welcome"]{background:var(--asphalt);color:#fff}
+.welcome-art{flex:1;position:relative;overflow:hidden;min-height:200px}
+.welcome-art svg{position:absolute;inset:0;width:100%;height:100%}
+.welcome-copy{padding:0 24px 8px}
+.welcome-copy h1{font-size:34px}
+.welcome-copy .lead{color:#b9c0c7;margin-top:10px}
+.perm{display:flex;gap:12px;align-items:center;margin-top:16px;background:var(--asphalt-2);border-radius:14px;padding:12px 14px;width:100%;text-align:left}
+.perm b{display:block;font-size:14px}
+.perm small{color:#9aa3ab;font-size:12px}
+.perm .switch{margin-left:auto}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em;font-size:18px;padding:16px 24px}
+.brand b{width:30px;height:30px;border-radius:9px;background:var(--signal);display:grid;place-items:center;color:var(--signal-ink)}
+
+/* Maps */
+.map{position:relative;flex:1;overflow:hidden;background:#e8e6df;touch-action:none}
+.map svg.base{position:absolute;inset:0;width:100%;height:100%}
+.pan{position:absolute;left:-150px;top:-150px;width:calc(100% + 300px);height:calc(100% + 300px);will-change:transform;cursor:grab}
+.pan.dragging{cursor:grabbing}
+.pan svg{position:absolute;inset:0;width:100%;height:100%}
+.pin{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;padding:4px}
+.pin span{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25);border:2px solid #fff;transition:transform .15s}
+.pin span i{transform:rotate(45deg);font-style:normal;font-size:12px;font-weight:800;color:#fff}
+.pin.sel span{transform:rotate(-45deg) scale(1.25)}
+.pin.open span{background:var(--warn)}
+.pin.prog span{background:var(--blue)}
+.pin.done span{background:var(--go)}
+.pin.rec span{background:var(--signal)} .pin.rec span i{color:var(--signal-ink)}
+.pin.hide{display:none}
+.mini-pin{position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid #fff;transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none}
+.me-dot{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--blue);border:3px solid #fff;box-shadow:0 0 0 8px rgba(36,99,214,.18);transform:translate(-50%,-50%)}
+.searchbar{position:absolute;top:12px;left:16px;right:16px;display:flex;gap:10px;z-index:4}
+.searchbar .field{flex:1;height:48px;border-radius:14px;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--muted);font-size:15px;text-align:left}
+.searchbar .avatar{width:48px;height:48px;border-radius:14px;background:#fff;box-shadow:var(--shadow);display:grid;place-items:center;font-weight:800}
+.legend{position:absolute;top:72px;left:16px;right:16px;display:flex;gap:6px;z-index:4;overflow-x:auto;pointer-events:none}
+.legend .chip{pointer-events:auto}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;background:#fff;box-shadow:var(--shadow);font-size:13px;font-weight:600;flex:none}
+.chip i{width:8px;height:8px;border-radius:50%}
+.chip.off{opacity:.45;text-decoration:line-through}
+.sheet{background:var(--card);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.08);padding:10px 20px 14px;position:relative;z-index:5}
+.grab{width:40px;height:5px;border-radius:5px;background:var(--line);margin:0 auto 12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 16px}
+.stat{background:var(--paper);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:20px;letter-spacing:-.02em}
+.stat small{color:var(--muted);font-size:12px}
+.tabbar{display:flex;border-top:1px solid var(--line);background:#fff;padding:6px 8px 20px}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--muted);padding:6px 0;position:relative}
+.tabbar button.on{color:var(--ink)}
+.tabbar .count{position:absolute;top:0;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--warn);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;padding:0 5px;border:2px solid #fff}
+.fab-wrap{position:absolute;right:16px;bottom:16px;z-index:4;display:flex;flex-direction:column;gap:8px}
+.round{width:48px;height:48px;border-radius:14px;background:#fff;box-shadow:var(--shadow);display:grid;place-items:center}
+.preview{display:flex;gap:12px;align-items:center}
+.preview .th{width:64px;height:64px;border-radius:12px;overflow:hidden;flex:none}
+.preview .th svg{width:100%;height:100%}
+.preview b{display:block;font-size:16px}
+.preview small{color:var(--muted);font-size:13px}
+.preview-actions{display:flex;gap:8px;margin-top:14px}
+.preview-actions .btn{flex:1}
+.draft-banner{display:flex;align-items:center;gap:10px;background:#fff7dc;border:1px solid #f3dd90;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.draft-banner b{display:block;font-size:14px}
+.draft-banner .grow{flex:1}
+
+/* Search */
+.search-input{display:flex;align-items:center;gap:10px;margin:0 20px;height:50px;border-radius:14px;background:#fff;border:1.5px solid var(--asphalt);padding:0 14px}
+.search-input input{flex:1;border:0;background:transparent;font-size:16px;outline:none}
+.results{margin:14px 20px 0;overflow:hidden}
+.result{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:14px 16px;border-bottom:1px solid var(--line)}
+.result:last-child{border:0}
+.result .ic{width:36px;height:36px;border-radius:10px;background:var(--paper);display:grid;place-items:center;flex:none}
+.result b{display:block;font-size:15px}
+.result small{color:var(--muted);font-size:13px}
+.result mark{background:#fff1b0;color:inherit;border-radius:3px}
+
+/* Locate */
+.crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);pointer-events:none;z-index:3;display:flex;flex-direction:column;align-items:center;transition:transform .12s}
+.crosshair.lift{transform:translate(-50%,calc(-100% - 12px))}
+.crosshair .stem{width:3px;height:16px;background:var(--asphalt)}
+.crosshair .head{width:44px;height:44px;border-radius:50%;background:var(--signal);border:3px solid var(--asphalt);display:grid;place-items:center;box-shadow:0 6px 14px rgba(0,0,0,.25)}
+.crosshair .shadow{width:14px;height:5px;border-radius:50%;background:rgba(0,0,0,.25);margin-top:-2px}
+.drag-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(20,23,26,.85);color:#fff;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;z-index:4;pointer-events:none;white-space:nowrap;transition:opacity .3s}
+.drag-hint.gone{opacity:0}
+.addr{display:flex;gap:12px;align-items:flex-start}
+.addr .ic{width:40px;height:40px;border-radius:12px;background:var(--paper);display:grid;place-items:center;flex:none}
+.addr b{display:block;font-size:16px}
+.addr small{color:var(--muted);font-size:13px}
+.addr .link{margin-left:auto;padding:8px 0}
+.dup{background:#fff7dc;border:1px solid #f3dd90;border-radius:12px;padding:12px;font-size:13px;line-height:1.4;margin:12px 0 0;display:none}
+.dup.show{display:block}
+.dup .row-act{display:flex;gap:8px;margin-top:10px}
+.dup .row-act .btn{flex:1;height:40px;font-size:13px}
+.loc-cta{margin-top:14px}
+
+/* Photo */
+.camera{margin:4px 20px 0;border-radius:20px;overflow:hidden;position:relative;aspect-ratio:4/5;background:#111}
+.camera svg{width:100%;height:100%;display:block}
+.camera .frame{position:absolute;inset:18px;border:2px dashed rgba(255,255,255,.55);border-radius:14px}
+.camera .tip{position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font-size:13px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.camera .shot{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.camera .shot.flash{animation:flash .35s}
+.camera .gps-tag{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:999px}
+@keyframes flash{0%{opacity:.9}100%{opacity:0}}
+.thumbs{display:flex;gap:10px;padding:14px 20px 0;align-items:center}
+.thumb{width:62px;height:62px;border-radius:12px;overflow:hidden;position:relative;background:#333;flex:none}
+.thumb svg,.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:13px;line-height:22px}
+.thumb.empty{background:transparent;border:1.5px dashed #c9cdd2;display:grid;place-items:center;color:#a5abb1;font-size:11px;font-weight:600}
+.shutter-row{display:flex;align-items:center;justify-content:space-between;padding:16px 36px 0}
+.shutter{width:74px;height:74px;border-radius:50%;border:4px solid var(--asphalt);display:grid;place-items:center}
+.shutter i{width:58px;height:58px;border-radius:50%;background:var(--asphalt);display:block;transition:transform .08s}
+.shutter:active i{transform:scale(.92)}
+.small-act{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--muted);width:64px;min-height:48px;justify-content:center}
+
+/* Details */
+.group{margin-top:22px}
+.group .label{margin-bottom:10px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center;font-size:13px;font-weight:600}
+.seg button .sz{display:block;margin:0 auto 6px;border-radius:50%;background:var(--asphalt-2)}
+.seg button.on{border-color:var(--asphalt);background:var(--asphalt);color:#fff}
+.seg button.on .sz{background:var(--signal)}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{height:40px;padding:0 14px;border-radius:999px;background:#fff;border:1.5px solid var(--line);font-size:14px;font-weight:600}
+.opt.on{background:var(--signal);border-color:var(--signal);color:var(--signal-ink)}
+textarea{width:100%;min-height:96px;border-radius:14px;border:1.5px solid var(--line);background:#fff;padding:12px 14px;font-size:15px;resize:none;line-height:1.45}
+textarea:focus,input:focus{outline:none;border-color:var(--asphalt)}
+.counter{font-size:12px;color:var(--muted);text-align:right;margin-top:6px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:14px;padding:14px;border:1.5px solid var(--line);width:100%;text-align:left}
+.toggle-row b{font-size:15px;display:block}
+.toggle-row small{font-size:13px;color:var(--muted)}
+.switch{width:50px;height:30px;border-radius:999px;background:#c9cdd2;position:relative;flex:none;transition:background .15s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .15s}
+.switch.on{background:var(--go)} .switch.on::after{left:23px}
+.safety{display:none;gap:12px;background:#fdecea;border:1px solid #f5c2bd;border-radius:14px;padding:12px 14px;margin-top:16px;font-size:13px;line-height:1.45;color:#7d1a12}
+.safety.show{display:flex}
+.safety b{display:block;font-size:14px}
+.safety a{color:#7d1a12;font-weight:800}
+
+/* Review */
+.review-hero{margin:4px 20px 0;border-radius:18px;overflow:hidden;position:relative;height:180px;display:flex;gap:4px;background:#222}
+.review-hero > *{flex:1;min-width:0;height:100%;object-fit:cover}
+.review-hero svg{width:100%;height:100%;display:block}
+.review-hero .tag{position:absolute;left:12px;bottom:12px}
+.no-photo{margin:4px 20px 0;border-radius:14px;padding:14px;border:1.5px dashed #c9cdd2;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+.rows{margin:16px 20px 0}
+.row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);font-size:15px}
+.row:last-child{border:0}
+.row span{color:var(--muted)}
+.row b{text-align:right;font-weight:600}
+.row .val{text-align:right;max-width:220px}
+.row .val button{color:var(--blue);font-weight:700;font-size:13px;padding:4px 0}
+.contact{margin:8px 20px 0;padding:4px 14px;border-radius:14px;background:#fff;border:1.5px solid var(--line)}
+.contact input{width:100%;border:0;border-bottom:1px solid var(--line);padding:12px 0;font-size:15px;background:transparent}
+.contact input:last-child{border:0}
+.contact.hidden{display:none}
+.fine{font-size:12px;color:var(--muted);line-height:1.45;margin:12px 20px 0}
+
+/* Submitted */
+[data-screen="submitted"]{background:var(--asphalt);color:#fff}
+.done-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 28px}
+.check{width:84px;height:84px;border-radius:26px;background:var(--signal);display:grid;place-items:center;margin-bottom:28px;animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+.ticket{margin-top:26px;background:var(--asphalt-2);border-radius:16px;padding:16px}
+.ticket .row{border-color:#3a424a;padding:10px 0;font-size:14px}
+.ticket .row span{color:#9aa3ab}
+.timeline-mini{display:flex;gap:6px;margin-top:14px}
+.timeline-mini div{flex:1}
+.timeline-mini i{display:block;height:4px;border-radius:4px;background:#3a424a;margin-bottom:6px}
+.timeline-mini i.on{background:var(--signal)}
+.timeline-mini small{font-size:11px;color:#9aa3ab}
+[data-screen="submitted"] .footer{background:none}
+[data-screen="submitted"] .btn-ghost{color:#fff;border-color:#3a424a}
+
+/* Lists */
+.filters{display:flex;gap:8px;padding:0 20px 14px;overflow-x:auto}
+.filters .opt{flex:none}
+.list{padding:0 20px 20px;display:flex;flex-direction:column;gap:10px}
+.item{display:flex;gap:12px;padding:12px;align-items:center;text-align:left;width:100%}
+.item .th{width:64px;height:64px;border-radius:12px;overflow:hidden;flex:none;background:#333}
+.item .th svg,.item .th img{width:100%;height:100%;object-fit:cover;display:block}
+.item .meta{flex:1;min-width:0}
+.item .meta b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .meta small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.status{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:700;margin-top:6px}
+.status i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.s-open{background:#fde8df;color:#a33a0c}
+.s-prog{background:#e1eafb;color:#1b4fae}
+.s-done{background:#ddf3e8;color:#14683f}
+.s-rec{background:#fff4cc;color:#6e5200}
+.empty{text-align:center;padding:48px 20px}
+.empty .lead{margin:8px 0 18px}
+
+/* Detail */
+.detail-hero{height:230px;position:relative;flex:none;background:#222}
+.detail-hero svg,.detail-hero img{width:100%;height:100%;display:block;object-fit:cover}
+.detail-hero .icon-btn{position:absolute;top:10px;left:12px;background:rgba(255,255,255,.92)}
+.detail-hero .icon-btn.r{left:auto;right:12px}
+.detail-body{padding:18px 20px 24px}
+.detail-body h1{font-size:24px}
+.eta{display:flex;gap:12px;align-items:center;margin-top:16px;padding:12px 14px;background:#e1eafb;border-radius:14px;color:#123a82;font-size:14px;line-height:1.4}
+.eta b{display:block;font-size:15px}
+.upvote{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px}
+.upvote .count{font-size:22px;font-weight:800}
+.upvote small{color:var(--muted);font-size:13px;display:block}
+.upvote button{margin-left:auto;height:44px;padding:0 14px;border-radius:12px;background:var(--paper);font-weight:700;font-size:14px}
+.upvote button.on{background:var(--signal);color:var(--signal-ink)}
+.upvote button[disabled]{opacity:.6;cursor:default}
+.timeline{margin-top:14px;position:relative;padding-left:26px}
+.timeline::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl{position:relative;padding-bottom:18px}
+.tl::before{content:"";position:absolute;left:-23px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--line)}
+.tl.on::before{background:var(--go);border-color:var(--go)}
+.tl.now::before{background:var(--signal);border-color:var(--asphalt)}
+.tl.reopen::before{background:var(--warn);border-color:var(--warn)}
+.tl b{display:block;font-size:15px}
+.tl small{font-size:13px;color:var(--muted)}
+.tl p{font-size:14px;color:var(--muted);margin-top:4px;line-height:1.4}
+.rate{margin-top:8px;padding:16px}
+.rate b{display:block;font-size:16px}
+.rate .rate-btns{display:flex;gap:8px;margin-top:12px}
+.rate .rate-btns .btn{flex:1;height:46px;font-size:14px}
+.rate .thanks{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.4}
+.follow-row{margin-top:12px}
+
+/* Updates */
+.notif{display:flex;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);text-align:left;width:100%;background:transparent;position:relative}
+.notif.unread{background:#fffbea}
+.notif.unread::after{content:"";position:absolute;right:18px;top:20px;width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.notif .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+.notif b{display:block;font-size:15px;padding-right:16px}
+.notif p{font-size:14px;color:var(--muted);line-height:1.4;margin-top:2px}
+.notif small{font-size:12px;color:var(--muted)}
+
+/* Profile */
+.profile-head{display:flex;align-items:center;gap:14px;padding:6px 20px 18px}
+.profile-head .av{width:60px;height:60px;border-radius:18px;background:var(--signal);display:grid;place-items:center;font-weight:800;font-size:22px;color:var(--signal-ink)}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 20px}
+.impact{margin:14px 20px 0;padding:14px 16px;display:flex;gap:12px;align-items:center;font-size:14px;line-height:1.4}
+.impact .big{font-size:26px;font-weight:800;color:var(--go)}
+.menu{margin:14px 20px 0;overflow:hidden}
+.menu > button,.menu > div{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border-bottom:1px solid var(--line);font-size:15px;font-weight:500;text-align:left;min-height:52px}
+.menu > :last-child{border:0}
+.menu .sub{color:var(--muted);font-size:14px}
+.menu-title{margin:22px 20px 0}
+
+/* Other problem link on home */
+.other-link{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:44px;margin-top:6px;font-size:14px;font-weight:600;color:var(--muted)}
+.stats-link{display:flex;justify-content:space-between;align-items:center;margin-top:-8px;margin-bottom:12px;width:100%}
+
+/* Category */
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px}
+.cat{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:10px;min-height:118px}
+.cat .ci{width:42px;height:42px;border-radius:12px;display:grid;place-items:center}
+.cat b{font-size:15px;display:block}
+.cat small{font-size:12px;color:var(--muted);line-height:1.35}
+.cat.wide{grid-column:span 2;flex-direction:row;align-items:center;min-height:0}
+.urgent{margin:16px 20px 0;display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;background:#fdecea;border:1px solid #f5c2bd;color:#7d1a12;font-size:13px;line-height:1.45}
+.urgent b{display:block;font-size:14px}
+.urgent a{color:#7d1a12;font-weight:800}
+
+/* Plan note on locate */
+.plan-note{display:none;gap:10px;align-items:flex-start;background:#eef3fd;border:1px solid #c9d8f6;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13px;line-height:1.4;color:#123a82}
+.plan-note.show{display:flex}
+
+/* Roadwork */
+.road-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.road-overlay.hide{display:none}
+.cone-pin{position:absolute;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:10px;background:#ff7a1a;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);display:grid;place-items:center;z-index:2}
+.cone-pin.hide{display:none}
+.seg-tabs{display:flex;gap:4px;margin:0 20px 14px;background:#e9e7e1;border-radius:12px;padding:4px}
+.seg-tabs button{flex:1;height:36px;border-radius:9px;font-size:13px;font-weight:700;color:var(--muted)}
+.seg-tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.proj{padding:16px;scroll-margin-top:12px}
+.proj.hl{box-shadow:0 0 0 3px var(--signal),var(--shadow)}
+.proj-top{display:flex;gap:12px;align-items:flex-start}
+.proj-top .ci{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+.proj b{display:block;font-size:16px}
+.proj .when{font-size:13px;color:var(--muted);margin-top:2px}
+.proj p{font-size:14px;line-height:1.45;color:var(--muted);margin-top:10px}
+.proj .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tag-s{font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--paper);color:var(--muted)}
+.tag-s.hot{background:#fde8df;color:#a33a0c}
+.proj .proj-act{display:flex;gap:8px;margin-top:12px}
+.proj .proj-act .btn{flex:1;height:42px;font-size:14px}
+.callout{margin:0 20px 14px;padding:12px 14px;border-radius:14px;background:#fff7dc;border:1px solid #f3dd90;font-size:13px;line-height:1.45;color:#5b4500}
+
+/* Places */
+.place{padding:14px 16px}
+.place-top{display:flex;gap:12px;align-items:center}
+.place-top .ci{width:40px;height:40px;border-radius:12px;background:var(--paper);display:grid;place-items:center;flex:none}
+.place-top b{display:block;font-size:15px}
+.place-top small{font-size:13px;color:var(--muted)}
+.place-top .x{margin-left:auto}
+.mini-toggles{display:flex;flex-direction:column;gap:2px;margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
+.mini-toggles button{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;font-size:14px;font-weight:500;text-align:left}
+.mini-toggles .switch{transform:scale(.85);transform-origin:right center}
+.radius{display:flex;gap:6px;margin-top:4px}
+.radius button{flex:1;height:34px;border-radius:10px;border:1.5px solid var(--line);font-size:12px;font-weight:700;background:#fff}
+.radius button.on{background:var(--asphalt);border-color:var(--asphalt);color:#fff}
+
+/* Claim */
+.field-l{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}
+.inp{width:100%;height:50px;border-radius:14px;border:1.5px solid var(--line);background:#fff;padding:0 14px;font-size:15px}
+.inp-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.linked{display:flex;gap:12px;align-items:center;padding:12px;margin-top:4px}
+.linked .th{width:52px;height:52px;border-radius:10px;overflow:hidden;flex:none}
+.linked .th svg,.linked .th img{width:100%;height:100%;display:block;object-fit:cover}
+.linked b{display:block;font-size:15px}
+.linked small{font-size:13px;color:var(--muted)}
+.upload{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border-radius:14px;border:1.5px dashed #c9cdd2;background:#fff;text-align:left;font-size:14px;margin-top:8px}
+.upload.ok{border-style:solid;border-color:var(--go);background:#f1faf5}
+.upload small{display:block;color:var(--muted);font-size:12px}
+.check-row{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;font-size:13px;line-height:1.45;color:var(--muted);margin-top:16px}
+.check-row .box{width:22px;height:22px;border-radius:6px;border:2px solid #b5bbc1;flex:none;display:grid;place-items:center;background:#fff}
+.check-row.on .box{background:var(--asphalt);border-color:var(--asphalt)}
+.claim-card{margin:14px 20px 0;padding:14px 16px}
+.claim-card .row{padding:10px 0;font-size:14px}
+
+/* City stats */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px}
+.kpi{padding:14px}
+.kpi b{display:block;font-size:26px;letter-spacing:-.02em}
+.kpi small{font-size:12px;color:var(--muted);line-height:1.35;display:block}
+.kpi .delta{font-size:12px;font-weight:700;margin-top:6px}
+.up{color:var(--go)} .down{color:var(--warn)}
+.bars{margin:10px 20px 0;padding:16px}
+.bar-row{display:grid;grid-template-columns:62px 1fr 44px;gap:10px;align-items:center;font-size:13px;padding:7px 0}
+.bar-row .track{height:12px;border-radius:6px;background:var(--paper);position:relative;overflow:hidden}
+.bar-row .fill{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--asphalt-2)}
+.bar-row.me .fill{background:var(--signal)}
+.bar-row.me{font-weight:800}
+.bar-row .goal{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--warn)}
+.bar-row span:last-child{text-align:right;font-weight:700}
+.bar-note{font-size:12px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:6px}
+.bar-note i{width:10px;height:2px;background:var(--warn);display:inline-block}
+.spark{margin:10px 20px 0;padding:16px}
+.spark svg{width:100%;height:90px;display:block;margin-top:8px}
+
+/* Thread */
+.thread{flex:1;overflow-y:auto;padding:8px 16px 16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:80%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.45}
+.msg small{display:block;font-size:11px;opacity:.7;margin-top:4px}
+.msg.them{background:#fff;box-shadow:var(--shadow);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--asphalt);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg.sys{align-self:center;background:transparent;color:var(--muted);font-size:12px;text-align:center;max-width:100%;padding:2px}
+.msg.typing{color:var(--muted);font-style:italic}
+.thread-head{display:flex;gap:10px;align-items:center;margin:0 16px 4px;padding:10px 12px}
+.thread-head .th{width:40px;height:40px;border-radius:10px;overflow:hidden;flex:none}
+.thread-head .th svg,.thread-head .th img{width:100%;height:100%;display:block;object-fit:cover}
+.thread-head b{display:block;font-size:14px}
+.thread-head small{font-size:12px;color:var(--muted)}
+.quick{display:flex;gap:6px;overflow-x:auto;padding:8px 16px 0}
+.quick .opt{flex:none;height:34px;font-size:13px}
+.composer{display:flex;gap:8px;padding:10px 16px 24px;background:var(--paper);border-top:1px solid var(--line)}
+.composer input{flex:1;height:46px;border-radius:14px;border:1.5px solid var(--line);background:#fff;padding:0 14px;font-size:15px}
+.composer button{width:46px;height:46px;border-radius:14px;background:var(--asphalt);color:#fff;display:grid;place-items:center;flex:none}
+.detail-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.detail-acts .btn{height:46px;font-size:14px}
+
+/* Modal + toast */
+.scrim{position:absolute;inset:0;background:rgba(10,12,14,.45);z-index:60;display:none;align-items:flex-end}
+.scrim.show{display:flex;animation:fade .18s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.dialog{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:22px 20px 30px;animation:up .22s ease}
+@keyframes up{from{transform:translateY(40px)}to{transform:none}}
+.dialog h3{font-size:20px;letter-spacing:-.01em}
+.dialog p{margin:8px 0 18px}
+.dialog .btn + .btn{margin-top:10px}
+.toast{position:absolute;left:50%;bottom:110px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:70;max-width:340px;text-align:center;display:flex;gap:12px;align-items:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast button{color:var(--signal);font-weight:800;pointer-events:auto}
+.toast:not(.show){pointer-events:none}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="device" id="device">
+  <div class="statusbar" id="statusbar" aria-hidden="true"><span>9:41</span><span>&#9679;&#9679;&#9679; 5G &#9646;</span></div>
+  <div class="sr-only" aria-live="polite" id="live"></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <radialGradient id="holeG" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#0e0f10"/><stop offset=".7" stop-color="#25282b"/><stop offset="1" stop-color="#4a4f54"/></radialGradient>
+      <pattern id="grain" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#5b6066"/><circle cx="1" cy="1" r=".8" fill="#6c7177"/><circle cx="4" cy="3" r=".7" fill="#4c5156"/><circle cx="2" cy="5" r=".6" fill="#71767c"/></pattern>
+      <symbol id="pothole" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="url(#grain)"/>
+        <rect x="140" y="-10" width="10" height="320" fill="#e9d36b" opacity=".85" transform="rotate(8 150 150)"/>
+        <path d="M70 160 C60 110 120 85 170 95 C230 105 250 150 230 190 C210 230 140 235 105 220 C80 210 74 190 70 160Z" fill="url(#holeG)"/>
+        <path d="M95 165 C100 140 140 125 175 135 C205 145 210 175 190 195 C165 210 120 205 100 190Z" fill="#2c3a44" opacity=".65"/>
+        <path d="M120 170 C140 160 170 162 182 175" stroke="#7d98a8" stroke-width="3" fill="none" opacity=".5"/>
+        <path d="M230 190 L270 220 M70 160 L30 150 M170 95 L190 50 M105 220 L90 270" stroke="#2b2f33" stroke-width="3" fill="none"/>
+      </symbol>
+      <symbol id="pothole2" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="url(#grain)"/>
+        <rect x="0" y="230" width="300" height="70" fill="#9ea3a0"/>
+        <path d="M60 120 C80 80 160 70 200 100 C240 130 220 180 170 190 C120 200 50 170 60 120Z" fill="url(#holeG)"/>
+        <path d="M200 100 L250 60 M60 120 L20 100" stroke="#2b2f33" stroke-width="3"/>
+      </symbol>
+      <symbol id="pothole3" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="url(#grain)"/>
+        <ellipse cx="160" cy="150" rx="70" ry="40" fill="url(#holeG)"/>
+        <ellipse cx="90" cy="210" rx="30" ry="18" fill="url(#holeG)"/>
+        <path d="M0 60 L300 70" stroke="#fff" stroke-width="8" stroke-dasharray="40 30" opacity=".8"/>
+      </symbol>
+      <symbol id="patched" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="url(#grain)"/>
+        <path d="M60 110 L240 100 L245 200 L65 210Z" fill="#26292c"/>
+        <path d="M60 110 L240 100 L245 200 L65 210Z" fill="none" stroke="#151719" stroke-width="4"/>
+      </symbol>
+      <symbol id="lamp" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="#1b2230"/>
+        <circle cx="240" cy="60" r="3" fill="#cfd8e6"/><circle cx="60" cy="40" r="2" fill="#cfd8e6"/><circle cx="200" cy="110" r="2" fill="#cfd8e6"/>
+        <rect x="0" y="240" width="300" height="60" fill="#2a3036"/>
+        <rect x="142" y="70" width="10" height="175" fill="#5b6370"/>
+        <path d="M147 74 C147 50 180 46 205 52" stroke="#5b6370" stroke-width="8" fill="none"/>
+        <path d="M190 52 h34 l-6 14 h-22z" fill="#3b4250"/>
+        <path d="M196 66 h22 l26 60 h-74z" fill="#9aa3ab" opacity=".08"/>
+      </symbol>
+      <symbol id="sidewalk" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="#c9c6bd"/>
+        <g stroke="#a29e93" stroke-width="4"><path d="M0 100 H300 M0 200 H300 M150 0 V300"/></g>
+        <path d="M150 100 L300 100 L300 200 L150 200Z" fill="#b8b4a9" transform="rotate(-6 150 150)"/>
+        <path d="M150 140 l30 10 l20 -8 l40 14 l30 -6" stroke="#5f5b52" stroke-width="3" fill="none"/>
+        <rect x="0" y="260" width="300" height="40" fill="#7c8a5a"/>
+      </symbol>
+      <symbol id="signsym" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="#a9c4da"/>
+        <rect x="0" y="230" width="300" height="70" fill="#6b7077"/>
+        <rect x="160" y="120" width="8" height="120" fill="#8a9097" transform="rotate(38 164 240)"/>
+        <g transform="rotate(38 164 240) translate(164 118)"><path d="M-30 -12 L-12 -30 L12 -30 L30 -12 L30 12 L12 30 L-12 30 L-30 12Z" fill="#c62828" stroke="#fff" stroke-width="3"/></g>
+      </symbol>
+      <symbol id="debris" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="url(#grain)"/>
+        <rect x="140" y="-10" width="10" height="320" fill="#e9d36b" opacity=".85"/>
+        <path d="M40 200 C80 150 140 160 200 140 C240 128 270 150 280 170" stroke="#5a3e22" stroke-width="16" fill="none" stroke-linecap="round"/>
+        <path d="M120 160 l-20 -40 M180 146 l10 -44 M230 140 l30 -30" stroke="#5a3e22" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="100" cy="118" r="16" fill="#4f7a3a"/><circle cx="192" cy="98" r="18" fill="#4f7a3a"/><circle cx="262" cy="106" r="14" fill="#4f7a3a"/>
+      </symbol>
+      <symbol id="citymap" viewBox="0 0 390 600" preserveAspectRatio="xMidYMid slice">
+        <rect width="390" height="600" fill="#ebe8e0"/>
+        <rect x="250" y="40" width="160" height="140" rx="8" fill="#cfe3c4"/>
+        <rect x="-20" y="390" width="140" height="120" rx="8" fill="#cfe3c4"/>
+        <path d="M-10 520 C80 500 140 560 230 540 S360 560 410 520 L410 620 L-10 620Z" fill="#bcd7ea"/>
+        <g fill="#f4f2ec">
+          <rect x="20" y="30" width="90" height="70" rx="4"/><rect x="130" y="30" width="100" height="70" rx="4"/>
+          <rect x="20" y="130" width="90" height="90" rx="4"/><rect x="130" y="130" width="100" height="90" rx="4"/>
+          <rect x="250" y="210" width="120" height="70" rx="4"/><rect x="20" y="250" width="90" height="110" rx="4"/>
+          <rect x="130" y="250" width="100" height="50" rx="4"/><rect x="130" y="320" width="100" height="60" rx="4"/>
+          <rect x="250" y="310" width="120" height="100" rx="4"/><rect x="140" y="410" width="90" height="80" rx="4"/>
+          <rect x="250" y="430" width="120" height="60" rx="4"/>
+        </g>
+        <g stroke="#fff" stroke-linecap="round">
+          <path d="M0 115 H410" stroke-width="16"/><path d="M0 235 H410" stroke-width="12"/>
+          <path d="M0 395 H410" stroke-width="12"/><path d="M120 0 V600" stroke-width="14"/>
+          <path d="M240 0 V600" stroke-width="12"/><path d="M0 300 C120 290 180 300 240 300" stroke-width="8"/>
+        </g>
+        <path d="M0 115 H410" stroke="#ffd97a" stroke-width="5"/>
+        <path d="M120 0 V600" stroke="#ffd97a" stroke-width="5"/>
+        <g font-family="system-ui" font-size="10" fill="#7d8389" font-weight="600">
+          <text x="300" y="111">ELM AVE</text><text x="300" y="231">MAPLE ST</text><text x="20" y="391">RIVER RD</text>
+          <text x="126" y="560" transform="rotate(-90 126 560)">MAIN ST</text><text x="275" y="160" fill="#5c7a52">Lincoln Park</text>
+        </g>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- WELCOME -->
+  <section class="screen" data-screen="welcome" aria-label="Welcome">
+    <div class="brand"><b>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M4 18c2-6 6-9 8-9s6 3 8 9"/><circle cx="12" cy="14" r="2" fill="currentColor"/></svg>
+    </b>Street Fix</div>
+    <div class="welcome-art">
+      <svg viewBox="0 0 390 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs><linearGradient id="road" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3036"/><stop offset="1" stop-color="#3b434a"/></linearGradient></defs>
+        <path d="M150 0 L240 0 L420 420 L-30 420Z" fill="url(#road)"/>
+        <g fill="#ffc928"><path d="M191 20 h8 l3 40 h-14z"/><path d="M188 100 h14 l5 60 h-24z"/><path d="M183 210 h24 l8 90 h-40z"/><path d="M176 350 h38 l10 90 h-58z"/></g>
+        <ellipse cx="120" cy="330" rx="64" ry="22" fill="#111" /><ellipse cx="120" cy="326" rx="56" ry="17" fill="#1a1d20"/>
+        <path d="M60 330 l-30 8 M182 332 l26 10 M120 308 l6 -18" stroke="#111" stroke-width="2"/>
+        <g transform="translate(260 220)">
+          <path d="M0 80 L20 0 L40 80Z" fill="#ff7a1a"/><rect x="8" y="30" width="24" height="9" fill="#fff"/><rect x="4" y="52" width="32" height="9" fill="#fff"/><rect x="-6" y="78" width="52" height="8" rx="2" fill="#ff7a1a"/>
+        </g>
+        <g transform="translate(96 250)"><circle r="20" fill="#ffc928"/><path d="M-6 0 l4 5 l9 -11" stroke="#3a2d00" stroke-width="3.5" fill="none" stroke-linecap="round" transform="translate(0 2)"/></g>
+      </svg>
+    </div>
+    <div class="welcome-copy">
+      <h1>Spot it. Snap it.<br>Get it fixed.</h1>
+      <p class="lead">Report a pothole in under a minute, no account needed. Follow along as city crews repair it.</p>
+      <button class="perm" id="permLoc" aria-pressed="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffc928" stroke-width="2"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        <div><b>Use my location</b><small>Drops the pin for you. Only while reporting.</small></div>
+        <span class="switch on"></span>
+      </button>
+    </div>
+    <div class="footer" style="background:none">
+      <button class="btn btn-signal" data-go="home">Get started</button>
+      <button class="btn" style="color:#b9c0c7;height:44px;margin-top:6px;font-weight:600;font-size:14px" data-go="home" data-toast="Signed in as John Brown">I already have an account</button>
+    </div>
+  </section>
+
+  <!-- HOME MAP -->
+  <section class="screen" data-screen="home" aria-label="Map">
+    <div class="map" id="homeMap">
+      <svg class="base" viewBox="0 0 390 600" preserveAspectRatio="xMidYMin slice" aria-hidden="true"><use href="#citymap" width="390" height="600"/></svg>
+      <div class="searchbar">
+        <button class="field" data-go="search" data-mode="browse">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          Search an address
+        </button>
+        <button class="avatar" data-go="profile" aria-label="Profile">JB</button>
+      </div>
+      <div class="legend" id="legend" role="group" aria-label="Filter map by status">
+        <button class="chip" data-layer="open" aria-pressed="true"><i style="background:var(--warn)"></i>Reported</button>
+        <button class="chip" data-layer="prog" aria-pressed="true"><i style="background:var(--blue)"></i>Scheduled</button>
+        <button class="chip" data-layer="done" aria-pressed="true"><i style="background:var(--go)"></i>Fixed</button>
+        <button class="chip" data-layer="road" aria-pressed="true"><i style="background:#ff7a1a;border-radius:2px"></i>Roadwork</button>
+      </div>
+      <svg class="road-overlay" id="roadOverlay" viewBox="0 0 390 600" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+        <defs><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#ff7a1a"/><rect width="5" height="10" fill="#fff"/></pattern></defs>
+        <rect x="120" y="108" width="122" height="14" rx="4" fill="url(#hatch)" opacity=".9"/>
+        <rect x="233" y="235" width="14" height="160" rx="4" fill="url(#hatch)" opacity=".75"/>
+      </svg>
+      <button class="cone-pin" data-road="p1" style="left:46%;top:138px" aria-label="Roadwork: Elm Ave repaving">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M9 3h6l4 15H5z"/><rect x="3" y="18" width="18" height="3" rx="1"/></svg>
+      </button>
+      <button class="cone-pin" data-road="p2" style="left:61.5%;top:300px" aria-label="Roadwork: water main on 4th St">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M9 3h6l4 15H5z"/><rect x="3" y="18" width="18" height="3" rx="1"/></svg>
+      </button>
+      <div id="homePins"></div>
+      <div class="me-dot" style="left:52%;top:52%" aria-hidden="true"></div>
+      <div class="fab-wrap"><button class="round" data-toast="Centered on your location" aria-label="Center on my location">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+      </button></div>
+    </div>
+    <div class="sheet" id="homeSheet">
+      <div class="grab"></div>
+      <div id="sheetDefault">
+        <div class="draft-banner" id="draftBanner" hidden>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7a5b00" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+          <div class="grow"><b>Unfinished report</b><span id="draftBannerAddr">418 Maple St</span></div>
+          <button class="link" id="resumeDraft">Resume</button>
+        </div>
+        <div class="label">Your neighborhood this month</div>
+        <div class="stats">
+          <div class="stat"><b id="stOpen">42</b><small>Reported</small></div>
+          <div class="stat"><b>17</b><small>Scheduled</small></div>
+          <div class="stat"><b>96</b><small>Fixed</small></div>
+        </div>
+        <button class="stats-link link" data-go="city-stats"><span style="color:var(--muted);font-weight:600;font-size:13px">Avg. 6.1 days to fix in Ward 3</span><span>How the city is doing &rsaquo;</span></button>
+        <button class="btn btn-signal" id="startReport">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>
+          Report a pothole
+        </button>
+        <button class="other-link" data-go="category">Streetlight, sidewalk, sign or something else &rsaquo;</button>
+      </div>
+      <div id="sheetPreview" hidden>
+        <div class="preview">
+          <div class="th" id="pvArt"></div>
+          <div style="flex:1;min-width:0"><b id="pvAddr"></b><small id="pvSub"></small><div id="pvStatus"></div></div>
+          <button class="icon-btn" id="pvClose" aria-label="Close preview"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div class="preview-actions">
+          <button class="btn btn-ghost" id="pvVote">I hit this too</button>
+          <button class="btn btn-primary" id="pvOpen">Details</button>
+        </div>
+      </div>
+    </div>
+    <nav class="tabbar" data-tab="home"></nav>
+  </section>
+
+  <!-- CATEGORY -->
+  <section class="screen" data-screen="category" aria-label="Choose a problem type">
+    <div class="topbar">
+      <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>What's the problem?</h2><span class="spacer"></span>
+    </div>
+    <div class="scroll">
+      <p class="lead pad" style="margin:0 0 16px">Same quick report, routed to the right city team.</p>
+      <div class="cat-grid" id="catGrid"></div>
+      <div class="urgent">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex:none"><path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/></svg>
+        <div><b>Traffic signal out, downed wire, or water main break?</b>Don't wait on an app report. Call <a href="#" data-toast="Calling 311 Public Works line">311</a> now, or <a href="#" data-toast="Calling 911">911</a> if anyone is in danger.</div>
+      </div>
+      <p class="fine" style="margin-bottom:24px">Trash pickup, noise, and parking go to other departments. <a href="#" class="link" style="font-size:12px" data-toast="Opening city services directory">Find the right contact</a></p>
+    </div>
+  </section>
+
+  <!-- SEARCH -->
+  <section class="screen" data-screen="search" aria-label="Search address">
+    <div class="topbar">
+      <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2 id="searchTitle">Find a location</h2><span class="spacer"></span>
+    </div>
+    <label class="search-input">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input id="searchInput" type="search" placeholder="Street, intersection, or landmark" autocomplete="off" aria-label="Search address">
+    </label>
+    <div class="scroll">
+      <div class="card results" id="results"></div>
+      <p class="fine" style="margin-top:16px">Tip: for intersections, type both streets, like "Main and River".</p>
+    </div>
+  </section>
+
+  <!-- LOCATE -->
+  <section class="screen" data-screen="locate" aria-label="Step 1, location">
+    <div class="topbar">
+      <button class="icon-btn" data-exit aria-label="Close report"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <h2>Where is it?</h2>
+      <button class="icon-btn" data-go="search" data-mode="report" aria-label="Search address"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
+    </div>
+    <div class="steps"><i class="on"></i><i></i><i></i><i></i></div>
+    <div class="step-label">Step 1 of 4 &middot; Location</div>
+    <div class="map" id="locMap">
+      <div class="pan" id="locPan">
+        <svg aria-hidden="true"><use href="#citymap"/></svg>
+        <div id="locMarkers"></div>
+      </div>
+      <div class="drag-hint" id="dragHint">Drag the map to move the pin</div>
+      <div class="crosshair" id="crosshair"><div class="head"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d2125" stroke-width="2.6"><path d="M4 16c2-5 5-7 8-7s6 2 8 7"/></svg></div><div class="stem"></div><div class="shadow"></div></div>
+      <div class="fab-wrap">
+        <button class="round" id="gps" aria-label="Use my location"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></button>
+      </div>
+    </div>
+    <div class="sheet">
+      <div class="addr">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></div>
+        <div aria-live="polite"><b id="addrLine">418 Maple St</b><small id="addrSub">Near Main St &middot; Ward 3</small></div>
+      </div>
+      <div class="dup" id="dupBox" role="status">
+        <b id="dupTitle">Already reported nearby</b>
+        <div id="dupText"></div>
+        <div class="row-act">
+          <button class="btn btn-signal" id="dupConfirm">Same one, add my +1</button>
+          <button class="btn btn-ghost" id="dupDifferent">It's different</button>
+        </div>
+      </div>
+      <div class="plan-note" id="planNote" role="status">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff7a1a" style="flex:none"><path d="M9 3h6l4 15H5z"/><rect x="3" y="18" width="18" height="3" rx="1"/></svg>
+        <div><b>Elm Ave is being repaved Oct 12 to 16.</b> Potholes on this block get fixed as part of it. You can still report one if it's dangerous before then. <button class="link" style="font-size:13px" data-road-open="p1">See the project</button></div>
+      </div>
+      <button class="btn btn-primary loc-cta" id="confirmLoc">Confirm location</button>
+    </div>
+  </section>
+
+  <!-- PHOTO -->
+  <section class="screen" data-screen="photo" aria-label="Step 2, photo">
+    <div class="topbar">
+      <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Add a photo</h2>
+      <button class="icon-btn" data-exit aria-label="Close report"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    <div class="step-label">Step 2 of 4 &middot; Photo (recommended)</div>
+    <div class="scroll">
+      <div class="camera">
+        <svg viewBox="0 0 300 375" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use id="camArt" href="#pothole" width="300" height="375"/></svg>
+        <div class="frame"></div>
+        <div class="gps-tag" id="camLoc">418 Maple St</div>
+        <div class="tip" id="camTip">Include a shoe or cone for scale</div>
+        <div class="shot" id="flash"></div>
+      </div>
+      <div class="thumbs" id="thumbs" aria-label="Photos added"></div>
+      <div class="shutter-row">
+        <button class="small-act" id="libraryBtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>Library</button>
+        <button class="shutter" id="shutter" aria-label="Take photo"><i></i></button>
+        <button class="small-act" id="skipPhoto">Skip<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <input type="file" accept="image/*" id="fileInput" multiple hidden>
+      <div style="height:12px"></div>
+    </div>
+    <div class="footer"><button class="btn btn-primary" id="photoNext" disabled>Continue</button></div>
+  </section>
+
+  <!-- DETAILS -->
+  <section class="screen" data-screen="details" aria-label="Step 3, details">
+    <div class="topbar">
+      <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Details</h2>
+      <button class="icon-btn" data-exit aria-label="Close report"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+    <div class="step-label">Step 3 of 4 &middot; Details (all optional)</div>
+    <div class="scroll pad">
+      <div class="group" id="issueGroup" style="margin-top:6px;display:none">
+        <div class="label" id="issueLbl">What's wrong?</div>
+        <div class="opts" id="issueOpts" role="radiogroup" aria-labelledby="issueLbl"></div>
+      </div>
+      <div class="group" id="sizeGroup" style="margin-top:6px">
+        <div class="label" id="sizeLbl">How big is it?</div>
+        <div class="seg" id="sizeSeg" role="radiogroup" aria-labelledby="sizeLbl">
+          <button role="radio" data-size="Small"><span class="sz" style="width:14px;height:14px"></span>Small<br><small style="font-weight:500;opacity:.75">Fist</small></button>
+          <button role="radio" data-size="Medium" class="on"><span class="sz" style="width:22px;height:22px"></span>Medium<br><small style="font-weight:500;opacity:.75">Dinner plate</small></button>
+          <button role="radio" data-size="Large"><span class="sz" style="width:30px;height:30px"></span>Large<br><small style="font-weight:500;opacity:.75">Tire or bigger</small></button>
+        </div>
+      </div>
+      <div class="group" id="whereGroup">
+        <div class="label">Where on the road?</div>
+        <div class="opts" id="whereOpts" role="radiogroup">
+          <button class="opt on" role="radio">Driving lane</button><button class="opt" role="radio">Bike lane</button><button class="opt" role="radio">Crosswalk</button><button class="opt" role="radio">Shoulder</button><button class="opt" role="radio">Parking lane</button>
+        </div>
+      </div>
+      <div class="group">
+        <div class="label">Any hazards?</div>
+        <div class="opts" id="hazOpts">
+          <button class="opt" aria-pressed="false">Cars swerving</button><button class="opt" aria-pressed="false">Water filled</button><button class="opt" aria-pressed="false">Damaged my car</button><button class="opt" aria-pressed="false">Near a school</button><button class="opt" aria-pressed="false">Sinkhole / road collapse</button>
+        </div>
+        <div class="safety" id="safety" role="alert">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex:none"><path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/></svg>
+          <div><b>Is this an immediate danger?</b>A collapse or a hole that could cause a crash needs a faster response. Call <a href="#" data-toast="Calling 311 Public Works line">311</a>, or <a href="#" data-toast="Calling 911">911</a> if someone is hurt. You can still submit this report.</div>
+        </div>
+        <div id="claimHint" class="fine" style="margin:10px 0 0;display:none">Sorry about your car. You can file a damage claim with the City Clerk right after you submit, and we'll attach this report to it.</div>
+      </div>
+      <div class="group">
+        <div class="label"><label for="notes">Notes for the crew</label></div>
+        <textarea id="notes" maxlength="280" placeholder="e.g. Hard to see at night, right after the bus stop"></textarea>
+        <div class="counter" id="notesCount">0 / 280</div>
+      </div>
+      <div class="group" style="margin-bottom:24px">
+        <button class="toggle-row" id="notifyRow" aria-pressed="true">
+          <div><b>Notify me of updates</b><small>Text when it's inspected, scheduled and fixed</small></div>
+          <span class="switch on" id="notifySwitch"></span>
+        </button>
+      </div>
+    </div>
+    <div class="footer"><button class="btn btn-primary" data-go="review">Review report</button></div>
+  </section>
+
+  <!-- REVIEW -->
+  <section class="screen" data-screen="review" aria-label="Step 4, review">
+    <div class="topbar">
+      <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Review</h2>
+      <button class="icon-btn" data-exit aria-label="Close report"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+    <div class="step-label">Step 4 of 4 &middot; Review and send</div>
+    <div class="scroll">
+      <div class="review-hero" id="reviewHero"></div>
+      <div class="no-photo" id="noPhoto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l2-3h4l2 3"/></svg><span style="flex:1">No photo. Reports with photos get inspected faster.</span><button class="link" data-goto="photo">Add</button></div>
+      <div class="rows">
+        <div class="row"><span>Problem</span><div class="val"><b id="rvCat">Pothole</b><br><button data-goto="details" id="rvCatEdit">Edit</button></div></div>
+        <div class="row"><span>Location</span><div class="val"><b id="rvAddr">418 Maple St</b><br><button data-goto="locate">Edit</button></div></div>
+        <div class="row" id="rvSizeRow"><span>Size</span><div class="val"><b id="rvSize">Medium</b><br><button data-goto="details">Edit</button></div></div>
+        <div class="row" id="rvWhereRow"><span>Position</span><div class="val"><b id="rvWhere">Driving lane</b></div></div>
+        <div class="row"><span>Hazards</span><div class="val"><b id="rvHaz">None noted</b></div></div>
+        <div class="row"><span>Notes</span><div class="val"><b id="rvNotes">None</b></div></div>
+      </div>
+      <div class="pad" style="margin-top:8px">
+        <button class="toggle-row" id="anonRow" aria-pressed="false">
+          <div><b>Report anonymously</b><small>You won't get updates or credit for this report</small></div>
+          <span class="switch" id="anonSwitch"></span>
+        </button>
+      </div>
+      <div class="label" style="margin:16px 20px 0" id="contactLbl">Contact</div>
+      <div class="contact" id="contact">
+        <input type="text" value="John Brown" aria-label="Name" autocomplete="name">
+        <input type="tel" value="(555) 012-3344" aria-label="Phone for text updates" autocomplete="tel">
+      </div>
+      <p class="fine">Contact details are only shared with Public Works staff. Photos and location become part of the public record. Faces and license plates are blurred automatically.</p>
+      <div style="height:20px"></div>
+    </div>
+    <div class="footer"><button class="btn btn-signal" id="submitBtn">Submit report</button></div>
+  </section>
+
+  <!-- SUBMITTED -->
+  <section class="screen" data-screen="submitted" aria-label="Report submitted">
+    <div class="done-wrap">
+      <div class="check"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3a2d00" stroke-width="3" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
+      <h1>Thanks. Your report is in.</h1>
+      <p class="lead" id="doneLead" style="color:#b9c0c7;margin-top:10px">Public Works typically inspects within 2 business days and repairs medium potholes within 10.</p>
+      <div class="ticket">
+        <div class="row"><span>Ticket</span><b id="ticketNo">#PH-24817</b></div>
+        <div class="row"><span>Location</span><b id="ticketAddr">418 Maple St</b></div>
+        <div class="row"><span>Expected repair</span><b id="ticketEta">by Oct 20</b></div>
+        <div class="timeline-mini">
+          <div><i class="on"></i><small>Received</small></div>
+          <div><i></i><small>Inspected</small></div>
+          <div><i></i><small>Scheduled</small></div>
+          <div><i></i><small>Fixed</small></div>
+        </div>
+      </div>
+      <button class="link" id="claimLink" style="color:var(--signal);margin-top:16px;text-align:left;display:none">File a vehicle damage claim &rsaquo;</button>
+    </div>
+    <div class="footer">
+      <button class="btn btn-signal" id="trackNew">Track my report</button>
+      <button class="btn btn-ghost" style="margin-top:10px" id="reportAnother">Report another</button>
+    </div>
+  </section>
+
+  <!-- MY REPORTS -->
+  <section class="screen" data-screen="my-reports" aria-label="My reports">
+    <div class="topbar" style="padding-left:20px"><h1 style="font-size:26px;flex:1">My reports</h1></div>
+    <div class="filters" id="filters" role="group" aria-label="Filter reports">
+      <button class="opt on" data-f="all">All</button><button class="opt" data-f="open">In progress</button><button class="opt" data-f="done">Fixed</button><button class="opt" data-f="follow">Following</button>
+    </div>
+    <div class="scroll"><div class="list" id="reportList"></div></div>
+    <nav class="tabbar" data-tab="my-reports"></nav>
+  </section>
+
+  <!-- REPORT DETAIL -->
+  <section class="screen" data-screen="report-detail" aria-label="Report detail">
+    <div class="scroll">
+      <div class="detail-hero">
+        <div id="detailImg" style="width:100%;height:100%"></div>
+        <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="icon-btn r" data-toast="Link copied. Share it with neighbors." aria-label="Share"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13M7 8l5-5 5 5M5 14v5h14v-5"/></svg></button>
+      </div>
+      <div class="detail-body">
+        <div id="dStatus"></div>
+        <h1 id="dTitle" style="margin-top:8px">418 Maple St</h1>
+        <p class="lead" id="dSub" style="margin-top:4px">Medium &middot; Driving lane &middot; Ticket #PH-24817</p>
+        <div class="eta" id="dEta"></div>
+        <div class="card upvote">
+          <div><div class="count" id="voteCount">1</div><small>neighbors affected</small></div>
+          <button id="voteBtn">I hit this too</button>
+        </div>
+        <div class="follow-row" id="followWrap">
+          <button class="toggle-row" id="followRow" aria-pressed="false">
+            <div><b>Follow this report</b><small>Get a text when the status changes</small></div>
+            <span class="switch" id="followSwitch"></span>
+          </button>
+        </div>
+        <div class="detail-acts">
+          <button class="btn btn-ghost" id="msgBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H8l-4 4z"/></svg><span id="msgBtnTxt">Message crew</span></button>
+          <button class="btn btn-ghost" id="claimBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>Damage claim</button>
+        </div>
+        <div class="card rate" id="rateBox"></div>
+        <div class="label" style="margin-top:24px">Progress</div>
+        <div class="timeline" id="dTimeline"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- UPDATES -->
+  <section class="screen" data-screen="updates" aria-label="Updates">
+    <div class="topbar" style="padding-left:20px"><h1 style="font-size:26px;flex:1">Updates</h1><button class="icon-btn" id="markRead" style="font-size:13px;font-weight:700;width:auto;padding:0 10px;color:var(--blue)">Mark all read</button></div>
+    <div class="scroll" id="notifList"></div>
+    <nav class="tabbar" data-tab="updates"></nav>
+  </section>
+
+  <!-- PROFILE -->
+  <section class="screen" data-screen="profile" aria-label="Profile">
+    <div class="topbar" style="padding-left:20px"><h1 style="font-size:26px;flex:1">Profile</h1></div>
+    <div class="scroll">
+      <div class="profile-head">
+        <div class="av">JB</div>
+        <div><b style="font-size:18px">John Brown</b><div class="lead" style="font-size:14px">Ward 3 &middot; Reporting since 2025</div></div>
+      </div>
+      <div class="badges">
+        <div class="stat" style="background:#fff;box-shadow:var(--shadow)"><b id="pfTotal">4</b><small>Reports</small></div>
+        <div class="stat" style="background:#fff;box-shadow:var(--shadow)"><b id="pfFixed">1</b><small>Fixed</small></div>
+        <div class="stat" style="background:#fff;box-shadow:var(--shadow)"><b id="pfConf">9</b><small>Confirms</small></div>
+      </div>
+      <div class="card impact">
+        <div class="big">~140</div>
+        <div>drivers and cyclists a day pass the potholes you've helped get fixed.</div>
+      </div>
+      <div class="card claim-card" id="pfClaim" style="display:none"></div>
+      <div class="label menu-title">Your streets</div>
+      <div class="card menu">
+        <button data-go="places">Saved places &amp; alerts <span class="sub" id="pfPlaces">3 places &rsaquo;</span></button>
+        <button data-go="roadwork">Roadwork near me <span class="sub">4 projects &rsaquo;</span></button>
+        <button data-go="city-stats">City repair stats <span>&rsaquo;</span></button>
+        <button id="pfClaimBtn">Vehicle damage claim <span class="sub" id="pfClaimSub">&rsaquo;</span></button>
+      </div>
+      <div class="label menu-title">Notifications</div>
+      <div class="card menu">
+        <button class="pref" aria-pressed="true">Text messages <span class="switch on"></span></button>
+        <button class="pref" aria-pressed="true">Push notifications <span class="switch on"></span></button>
+        <button class="pref" aria-pressed="false">Weekly ward digest <span class="switch"></span></button>
+      </div>
+      <div class="label menu-title">Settings</div>
+      <div class="card menu">
+        <button id="langBtn">Language <span class="sub" id="langVal">English</span></button>
+        <button class="pref" aria-pressed="false" id="largeText">Larger text <span class="switch"></span></button>
+        <button data-toast="Opening privacy details">Privacy &amp; data <span>&rsaquo;</span></button>
+        <button data-toast="Calling 311 Public Works line">Call 311 <span>&rsaquo;</span></button>
+        <button data-go="welcome">Sign out <span>&rsaquo;</span></button>
+      </div>
+      <p class="fine" style="margin-bottom:24px">For dangerous road conditions that need immediate attention, call 911.</p>
+    </div>
+    <nav class="tabbar" data-tab="profile"></nav>
+  </section>
+
+  <!-- ROADWORK -->
+  <section class="screen" data-screen="roadwork" aria-label="Roadwork">
+    <div class="topbar" style="padding-left:20px"><h1 style="font-size:26px;flex:1">Roadwork</h1>
+      <button class="icon-btn" data-go="places" aria-label="Saved places and alerts"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg></button>
+    </div>
+    <div class="seg-tabs" id="roadTabs" role="tablist">
+      <button class="on" data-rt="now" role="tab" aria-selected="true">This week</button>
+      <button data-rt="soon" role="tab" aria-selected="false">Coming up</button>
+      <button data-rt="done" role="tab" aria-selected="false">Finished</button>
+    </div>
+    <div class="scroll">
+      <div class="callout" id="roadCallout">Planned repaving fixes every pothole on the block. If your street is on this list, the crew already knows.</div>
+      <div class="list" id="roadList"></div>
+    </div>
+    <nav class="tabbar" data-tab="roadwork"></nav>
+  </section>
+
+  <!-- SAVED PLACES -->
+  <section class="screen" data-screen="places" aria-label="Saved places and alerts">
+    <div class="topbar">
+      <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Saved places</h2><span class="spacer"></span>
+    </div>
+    <div class="scroll">
+      <p class="lead pad" style="margin-bottom:14px">Get a heads-up about closures, repairs, and new reports around the places you go every day.</p>
+      <div class="list" id="placeList" style="padding-bottom:10px"></div>
+      <div class="pad"><button class="btn btn-ghost" data-go="search" data-mode="place">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Add a place</button></div>
+      <p class="fine" style="margin-bottom:24px">Saved places stay on your account. We never track your location in the background.</p>
+    </div>
+  </section>
+
+  <!-- DAMAGE CLAIM -->
+  <section class="screen" data-screen="claim" aria-label="Vehicle damage claim">
+    <div class="topbar">
+      <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Damage claim</h2><span class="spacer"></span>
+    </div>
+    <div class="scroll pad">
+      <p class="lead" style="font-size:14px">Filed with the City Clerk. Most claims must be filed within 30 days of the damage. A claims adjuster reviews each one.</p>
+      <label class="field-l">Linked report</label>
+      <div class="card linked" id="claimLinked"></div>
+      <div class="inp-row">
+        <div><label class="field-l" for="cDate">Date of damage</label><input class="inp" id="cDate" type="date" value="2026-10-05"></div>
+        <div><label class="field-l" for="cTime">About what time</label><input class="inp" id="cTime" type="time" value="07:45"></div>
+      </div>
+      <label class="field-l" for="cCar">Vehicle</label>
+      <input class="inp" id="cCar" placeholder="Year, make, model" value="2019 Honda Civic">
+      <div class="label" style="margin:16px 0 8px">What was damaged?</div>
+      <div class="opts" id="dmgOpts">
+        <button class="opt on" aria-pressed="true">Tire</button><button class="opt on" aria-pressed="true">Rim</button><button class="opt" aria-pressed="false">Alignment</button><button class="opt" aria-pressed="false">Suspension</button><button class="opt" aria-pressed="false">Bumper</button><button class="opt" aria-pressed="false">Bike</button>
+      </div>
+      <label class="field-l" for="cCost">Repair cost or estimate</label>
+      <input class="inp" id="cCost" inputmode="decimal" placeholder="$0.00" value="$412.60">
+      <div class="label" style="margin:16px 0 0">Documents</div>
+      <button class="upload ok" id="upEst"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--go)" stroke-width="2.2"><path d="M5 12.5l4.5 4.5L19 7"/></svg><div><b>Repair estimate</b><small>Midtown Tire estimate.pdf</small></div></button>
+      <button class="upload" id="upPhotos"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/></svg><div><b>Photos of the damage</b><small>Tap to add. Report photos are attached already.</small></div></button>
+      <label class="field-l" for="cWhat">What happened</label>
+      <textarea id="cWhat" maxlength="500" placeholder="e.g. Heading east in the right lane, hit the pothole, tire went flat right away."></textarea>
+      <button class="check-row" id="certify" aria-pressed="false"><span class="box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><span>I confirm this information is true. I understand filing a claim does not guarantee payment.</span></button>
+      <div style="height:24px"></div>
+    </div>
+    <div class="footer"><button class="btn btn-primary" id="claimSubmit" disabled>Submit claim</button></div>
+  </section>
+
+  <!-- CITY STATS -->
+  <section class="screen" data-screen="city-stats" aria-label="City repair stats">
+    <div class="topbar">
+      <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>How the city is doing</h2>
+      <button class="icon-btn" data-toast="Link copied" aria-label="Share"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13M7 8l5-5 5 5M5 14v5h14v-5"/></svg></button>
+    </div>
+    <div class="seg-tabs" id="rangeTabs" role="tablist">
+      <button data-range="30" class="on" role="tab" aria-selected="true">30 days</button>
+      <button data-range="90" role="tab" aria-selected="false">90 days</button>
+      <button data-range="365" role="tab" aria-selected="false">12 months</button>
+    </div>
+    <div class="scroll">
+      <div class="kpis" id="kpis"></div>
+      <div class="card bars">
+        <div class="label">Average days to fix, by ward</div>
+        <div id="wardBars" style="margin-top:8px"></div>
+        <div class="bar-note"><i></i>City goal: 10 days</div>
+      </div>
+      <div class="card spark">
+        <div class="label">Reported vs. fixed, citywide</div>
+        <div id="sparkWrap"></div>
+        <div class="bar-note"><i style="background:var(--warn);height:3px"></i>Reported <i style="background:var(--go);height:3px;margin-left:10px"></i>Fixed</div>
+      </div>
+      <p class="fine" style="margin-bottom:24px">From Public Works work orders, updated nightly. "Days to fix" counts from first report to repair complete, including weekends.</p>
+    </div>
+  </section>
+
+  <!-- MESSAGE THREAD -->
+  <section class="screen" data-screen="thread" aria-label="Messages with Public Works">
+    <div class="topbar">
+      <button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Public Works</h2><span class="spacer"></span>
+    </div>
+    <div class="card thread-head" id="threadHead"></div>
+    <div class="thread" id="thread" aria-live="polite"></div>
+    <div class="quick" id="quick">
+      <button class="opt" data-q="It's gotten bigger since I reported it.">It got bigger</button>
+      <button class="opt" data-q="Is there an updated repair date?">Any update?</button>
+      <button class="opt" data-q="There's a second one about 20 feet east.">Found another nearby</button>
+      <button class="opt" data-q="Thanks for the quick work!">Thanks</button>
+    </div>
+    <form class="composer" id="composer">
+      <input id="msgInput" placeholder="Add info or ask a question" aria-label="Message" autocomplete="off">
+      <button type="submit" aria-label="Send"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+    </form>
+  </section>
+
+  <!-- Exit dialog -->
+  <div class="scrim" id="exitScrim" role="dialog" aria-modal="true" aria-labelledby="exitTitle">
+    <div class="dialog">
+      <h3 id="exitTitle">Leave this report?</h3>
+      <p class="lead">Save it as a draft and finish later, or discard it.</p>
+      <button class="btn btn-primary" id="saveDraft">Save draft</button>
+      <button class="btn btn-ghost" id="discardDraft" style="color:var(--danger)">Discard</button>
+      <button class="btn" id="keepEditing" style="height:44px;font-size:15px;color:var(--muted)">Keep editing</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"><span id="toastMsg"></span><button id="toastAct" hidden>Undo</button></div>
+</div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const statusbar = $('#statusbar');
+  let current = null, hist = [];
+
+  const STATUS = {
+    rec:{cls:'s-rec',txt:'Received',pin:'!'}, open:{cls:'s-open',txt:'Awaiting inspection',pin:'!'},
+    prog:{cls:'s-prog',txt:'Repair scheduled',pin:'&#9679;'}, done:{cls:'s-done',txt:'Fixed',pin:'&#10003;'}
+  };
+  // fx, fy = position on the panning layer of the locate map (fraction); hx, hy = home map %
+  const reports = {
+    r1:{addr:'1120 Elm Ave',sub:'Large · Driving lane',ticket:'#PH-24533',status:'prog',art:'pothole2',votes:7,mine:true,date:'Sep 30',eta:'Thu, Oct 8 · morning',hx:66,hy:38,fx:.62,fy:.24,
+        steps:[['Received','Sep 30, 8:12 AM','',1],['Inspected','Oct 2','Depth about 4 in. Marked priority 2.',1],['Repair scheduled','Thu, Oct 8','Crew 4 assigned, morning shift. Expect a lane closure.',2],['Fixed','','',0]]},
+    r2:{addr:'Main St & River Rd',sub:'Medium · Crosswalk',ticket:'#PH-24790',status:'open',art:'pothole3',votes:5,mine:true,date:'Oct 3',eta:'Inspection by Oct 7',hx:30,hy:28,fx:.34,fy:.66,
+        steps:[['Received','Oct 3, 5:40 PM','',1],['Inspected','','Typically within 2 business days.',2],['Repair scheduled','','',0],['Fixed','','',0]]},
+    r3:{addr:'Lincoln Park entrance',sub:'Small · Parking lane',ticket:'#PH-23901',status:'done',art:'patched',votes:3,mine:true,date:'Sep 18',hx:20,hy:62,fx:.74,fy:.30,
+        steps:[['Received','Sep 18','',1],['Inspected','Sep 22','',1],['Repair scheduled','Sep 26','',1],['Fixed','Sep 28','Cold patch applied. Permanent fill in spring.',1]]},
+    r4:{addr:'88 River Rd',sub:'Medium · Shoulder',ticket:'#PH-24702',status:'open',art:'pothole',votes:2,mine:false,date:'Oct 1',eta:'Inspection by Oct 6',hx:78,hy:70,fx:.72,fy:.70,
+        steps:[['Received','Oct 1','',1],['Inspected','','',2],['Repair scheduled','','',0],['Fixed','','',0]]},
+    r5:{addr:'300 Main St',sub:'Large · Bike lane',ticket:'#PH-24611',status:'prog',art:'pothole2',votes:11,mine:true,date:'Sep 27',eta:'Tue, Oct 6 · today',hx:45,hy:82,fx:.30,fy:.78,
+        steps:[['Received','Sep 27','',1],['Inspected','Sep 29','Hazard to cyclists. Priority 1.',1],['Repair scheduled','Tue, Oct 6','',2],['Fixed','','',0]]},
+    r6:{cat:'streetlight',addr:'Maple St & 5th St',sub:'Streetlight · Light is out',ticket:'#SL-24688',status:'open',art:'lamp',votes:4,mine:false,date:'Oct 2',eta:'Repair by Oct 9',hx:72,hy:46,fx:.66,fy:.48,
+        steps:[['Received','Oct 2','',1],['Checked by electrician','','Usually within 3 business days.',2],['Repair scheduled','','',0],['Fixed','','',0]]}
+  };
+  Object.values(reports).forEach(r=>{ r.cat = r.cat || 'pothole'; });
+
+  const CATS = {
+    pothole:{label:'Pothole',desc:'Holes, cracks, or sunken pavement',art:'pothole',prefix:'PH',team:'Street Maintenance',days:10,bg:'#fff4cc',fg:'#7a5b00',
+      icon:'<path d="M4 16c2-5 5-7 8-7s6 2 8 7"/><circle cx="12" cy="14" r="1.6" fill="currentColor"/>'},
+    streetlight:{label:'Streetlight',desc:'Out, flickering, or a damaged pole',art:'lamp',prefix:'SL',team:'Street Lighting',days:7,bg:'#e1eafb',fg:'#1b4fae',
+      issue:['Light is out','Flickering','On during the day','Pole damaged'],tip:'Get the number tag on the pole in frame if you can.',
+      icon:'<path d="M9 21V8a4 4 0 0 1 4-4h5"/><path d="M15 4h5l-1 3h-3z"/><path d="M6 21h6"/>'},
+    sidewalk:{label:'Sidewalk or curb',desc:'Trip hazards, gaps, broken ramps',art:'sidewalk',prefix:'SW',team:'Sidewalks & Accessibility',days:30,bg:'#f0eee8',fg:'#56606a',
+      issue:['Raised or cracked','Missing section','Curb ramp damaged','Path blocked'],tip:'Show the height difference. A shoe for scale helps.',
+      icon:'<path d="M3 20h18M3 15h18"/><path d="M8 15l2-5h4l2 5"/>'},
+    sign:{label:'Street sign',desc:'Down, missing, faded, or blocked',art:'signsym',prefix:'SG',team:'Traffic Operations',days:5,bg:'#fde8df',fg:'#a33a0c',
+      issue:['Knocked down','Missing','Faded or unreadable','Blocked by branches'],tip:'Step back so the whole sign and post are in the shot.',
+      icon:'<path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M12 8v5M12 16h.01"/>'},
+    debris:{label:'Debris in road',desc:'Branches, gravel, dumped items',art:'debris',prefix:'DB',team:'Street Maintenance',days:2,bg:'#ddf3e8',fg:'#14683f',
+      issue:['Branches or tree','Loose gravel','Dumped items','Dead animal'],tip:'Shoot from the curb. Never stand in traffic.',
+      icon:'<path d="M4 18c3-4 7-6 16-6"/><path d="M9 15l-2-5M14 13l1-5"/><circle cx="7" cy="9" r="2"/><circle cx="15" cy="7" r="2"/>'},
+    drain:{label:'Storm drain',desc:'Clogged, flooding, or missing grate',art:'pothole2',prefix:'SD',team:'Stormwater',days:5,bg:'#e3f2f7',fg:'#1d6a82',
+      issue:['Clogged','Street flooding','Grate missing or broken'],tip:'Show the grate and any standing water.',
+      icon:'<rect x="4" y="8" width="16" height="10" rx="2"/><path d="M8 8v10M12 8v10M16 8v10"/><path d="M7 4c1 1 2 1 3 0s2-1 3 0"/>'}
+  };
+
+  const PROJECTS = {
+    p2:{tab:'now',name:'4th St water main replacement',extent:'Maple St to River Rd',when:'Now through Oct 30',type:'Utility work',
+      desc:'Closed to through traffic. Local access only, detour via Main St. Road is fully repaved when the pipe work is done.',tags:[['Road closed',1],['Detour',1],['Near Home',0]],notify:true},
+    p3:{tab:'now',name:'Ward 3 pothole blitz',extent:'Wardwide',when:'Sat, Oct 10 · 7 AM to 3 PM',type:'Pothole repair',
+      desc:'Two extra crews will patch 40+ reported potholes in one day. Your report at Main St & River Rd is on the list.',tags:[['Your report included',0],['Short delays',0]],notify:true},
+    p1:{tab:'soon',name:'Elm Ave repaving',extent:'Main St to 4th St',when:'Mon, Oct 12 to Fri, Oct 16',type:'Repaving',
+      desc:'Full mill and overlay. One lane open each way 7 AM to 4 PM. No street parking during work hours; cars will be towed.',tags:[['Lane closure',1],['No parking 7a to 4p',1],['On your commute',0]],notify:false},
+    p4:{tab:'soon',name:'River Rd crack sealing',extent:'Main St to the river path',when:'Oct 19 to 21',type:'Preventive',
+      desc:'Sealing cracks now keeps them from turning into potholes after the winter freeze.',tags:[['Rolling closures',0]],notify:false},
+    p5:{tab:'done',name:'Lincoln Park Dr resurfacing',extent:'Park entrance to Elm Ave',when:'Finished Sep 26',type:'Repaving',
+      desc:'Completed two days ahead of schedule. 3 open pothole reports were closed as part of this project.',tags:[['3 reports closed',0]],notify:false}
+  };
+
+  let savedPlaces = [
+    {id:'pl1',name:'Home',addr:'418 Maple St',kind:'home',road:true,reps:true,radius:1},
+    {id:'pl2',name:'Commute',addr:'Elm Ave from Main St to 5th St',kind:'route',road:true,reps:false,radius:0},
+    {id:'pl3',name:'Oak Elementary',addr:'210 Maple St · school drop-off',kind:'pin',road:true,reps:true,radius:1}
+  ];
+  const RADII = ['On the street','2 blocks','Half mile'];
+
+  const threads = {
+    r1:[{who:'sys',t:'Messages go to the Street Maintenance team. Replies usually within 1 business day.'},
+        {who:'me',t:'Will the lane be closed all day Thursday? I drop my kids off on Elm.',when:'Oct 4, 6:10 PM'},
+        {who:'them',name:'Dana R., Street Maintenance',t:'Morning only, about 7 to 11 AM. Cones go out the night before. Thanks for asking.',when:'Oct 5, 9:02 AM'}]
+  };
+  let claim = null, claimFor = null, threadId = 'r1', roadTab = 'now', roadFocus = null, statRange = '30';
+
+  const notifs = [
+    {id:'n1',r:'r5',type:'prog',t:'Crew on the way',p:'Repair at 300 Main St starts today. Bike lane closed until 2 PM.',when:'35 min ago',unread:true},
+    {id:'n7',proj:'p2',type:'road',t:'Road closure near Home',p:'4th St is closed to through traffic until Oct 30. Detour via Main St.',when:'3 hours ago',unread:true},
+    {id:'n2',r:'r1',type:'prog',t:'Repair scheduled',p:'Crew assigned to 1120 Elm Ave for Thursday morning.',when:'2 hours ago',unread:true},
+    {id:'n3',r:'r2',type:'vote',t:'5 neighbors confirmed',p:'Others also reported Main St & River Rd. Priority raised.',when:'Yesterday',unread:true},
+    {id:'n6',r:'r1',type:'msg',t:'Reply from Public Works',p:'"Morning only, about 7 to 11 AM. Cones go out the night before."',when:'Yesterday',unread:false},
+    {id:'n4',r:'r3',type:'done',t:'Pothole fixed',p:'Lincoln Park entrance was patched. How did it turn out?',when:'Sep 28',unread:false},
+    {id:'n5',r:'r3',type:'insp',t:'Inspected',p:'An inspector verified the pothole at Lincoln Park entrance.',when:'Sep 22',unread:false}
+  ];
+  const PLACES = [
+    {a:'418 Maple St',s:'Near Main St · Ward 3',fx:.5,fy:.5},
+    {a:'Main St & River Rd',s:'Intersection · Ward 3',fx:.34,fy:.66},
+    {a:'1207 Elm Ave',s:'Between Main St and 3rd St · Ward 2',fx:.62,fy:.24},
+    {a:'55 Lincoln Park Dr',s:'Park entrance · Ward 2',fx:.74,fy:.30},
+    {a:'300 Main St',s:'Bike lane corridor · Ward 3',fx:.30,fy:.78},
+    {a:'88 River Rd',s:'Near the river path · Ward 4',fx:.72,fy:.70},
+    {a:'210 Maple St',s:'Near Oak Elementary · Ward 3',fx:.25,fy:.42},
+    {a:'640 Elm Ave',s:'At 5th St · Ward 2',fx:.40,fy:.22},
+    {a:'Maple St & 5th St',s:'Intersection · Ward 3',fx:.66,fy:.48}
+  ];
+
+  const freshDraft = () => ({cat:'pothole',issue:'',photos:[],size:'Medium',where:'Driving lane',haz:[],notes:'',addr:'418 Maple St',sub:'Near Main St · Ward 3',fx:.5,fy:.5,notify:true,anon:false,step:'locate'});
+  let draft = freshDraft(), savedDraft = null;
+  let detailId = 'r1', voted = {}, followed = {r4:true}, rated = {};
+  let layers = {open:true,prog:true,done:true,road:true};
+  let searchMode = 'browse', previewId = null, lastNewId = null;
+  const FLOW = ['locate','photo','details','review'];
+
+  /* ---------- navigation ---------- */
+  function go(name, opts={}){
+    const next = $(`.screen[data-screen="${name}"]`);
+    if(!next) return;
+    if(current && !opts.back && !opts.replace) hist.push(current.dataset.screen);
+    $$('.screen').forEach(s=>s.classList.remove('active','back'));
+    next.classList.add('active'); if(opts.back) next.classList.add('back');
+    next.querySelectorAll('.scroll').forEach(s=>s.scrollTop=0);
+    current = next;
+    statusbar.classList.toggle('light', ['welcome','submitted'].includes(name));
+    if(FLOW.includes(name)) draft.step = name;
+    if(name==='review' && !opts.keepFlag) draft.returnToReview = false;
+    ({home:renderHome, search:renderResults, locate:enterLocate, photo:renderThumbs, review:fillReview,
+      'my-reports':renderList, 'report-detail':renderDetail, updates:renderNotifs, profile:renderProfile,
+      category:renderCats, roadwork:renderRoad, places:renderPlaces, claim:renderClaim, 'city-stats':renderStats, thread:renderThread})[name]?.();
+    renderTabbars();
+    const h = next.querySelector('h1,h2'); $('#live').textContent = h ? h.textContent : '';
+  }
+  function back(){ go(hist.pop()||'home',{back:true}); }
+
+  let toastT;
+  function toast(msg, action){
+    $('#toastMsg').textContent=msg;
+    const a=$('#toastAct'); a.hidden=!action; a.onclick=action?()=>{action.fn(); $('#toast').classList.remove('show');}:null;
+    if(action) a.textContent=action.label;
+    $('#toast').classList.add('show');
+    clearTimeout(toastT); toastT=setTimeout(()=>$('#toast').classList.remove('show'), action?3500:1800);
+  }
+
+  document.addEventListener('click', e=>{
+    const ex = e.target.closest('[data-exit]'); if(ex){ openExit(); return; }
+    const bk = e.target.closest('[data-back]'); if(bk){ back(); return; }
+    const g = e.target.closest('[data-go]');
+    if(g && !g.disabled){
+      if(g.dataset.mode) searchMode = g.dataset.mode;
+      if(g.dataset.toast) toast(g.dataset.toast);
+      go(g.dataset.go); return;
+    }
+    const gt = e.target.closest('[data-goto]'); // edit from review: jump back into flow
+    if(gt){ draft.returnToReview = true; go(gt.dataset.goto); return; }
+    const d = e.target.closest('[data-detail]');
+    if(d){ detailId=d.dataset.detail; go('report-detail'); return; }
+    const ro = e.target.closest('[data-road],[data-road-open]');
+    if(ro){ openRoad(ro.dataset.road||ro.dataset.roadOpen); return; }
+    const tt = e.target.closest('[data-toast]');
+    if(tt){ e.preventDefault(); toast(tt.dataset.toast); }
+  });
+
+  /* ---------- tab bars ---------- */
+  const TABS = [
+    ['home','Map','<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>'],
+    ['my-reports','My reports','<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/>'],
+    ['roadwork','Roadwork','<path d="M9.5 3h5l4.5 15H5z"/><path d="M7.5 10h9M6.3 14h11.4"/><path d="M3 21h18"/>'],
+    ['updates','Updates','<path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>'],
+    ['profile','Profile','<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>']
+  ];
+  function renderTabbars(){
+    const unread = notifs.filter(n=>n.unread).length;
+    $$('nav.tabbar').forEach(nav=>{
+      const on = nav.dataset.tab;
+      nav.innerHTML = TABS.map(([k,l,ic])=>`<button class="${k===on?'on':''}" data-go="${k}" ${k===on?'aria-current="page"':''}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${ic}</svg>${l}
+        ${k==='updates'&&unread?`<span class="count" aria-label="${unread} unread">${unread}</span>`:''}</button>`).join('');
+    });
+  }
+
+  /* ---------- welcome ---------- */
+  let locPerm = true;
+  $('#permLoc').addEventListener('click',e=>{
+    locPerm=!locPerm; e.currentTarget.setAttribute('aria-pressed',locPerm);
+    e.currentTarget.querySelector('.switch').classList.toggle('on',locPerm);
+  });
+
+  /* ---------- home ---------- */
+  const art = (r) => r.photoUrl ? `<img src="${r.photoUrl}" alt="">` : `<svg viewBox="0 0 300 300" aria-hidden="true"><use href="#${r.art}"/></svg>`;
+  const statusKey = r => r.status==='rec' ? 'open' : r.status;
+  const meToo = r => r.cat==='pothole' ? 'I hit this too' : 'I see it too';
+  function renderHome(){
+    const wrap=$('#homePins');
+    wrap.innerHTML = Object.entries(reports).map(([k,r])=>{
+      const s=STATUS[r.status];
+      return `<button class="pin ${r.status} ${layers[statusKey(r)]?'':'hide'} ${previewId===k?'sel':''}" style="left:${r.hx}%;top:${r.hy}%" data-pin="${k}" aria-label="${r.addr}, ${s.txt}"><span><i>${s.pin}</i></span></button>`;
+    }).join('');
+    $('#roadOverlay').classList.toggle('hide',!layers.road);
+    $$('.cone-pin').forEach(c=>c.classList.toggle('hide',!layers.road));
+    $('#draftBanner').hidden = !savedDraft;
+    if(savedDraft) $('#draftBannerAddr').textContent = savedDraft.addr + ' · ' + savedDraft.photos.length + ' photo' + (savedDraft.photos.length===1?'':'s');
+    const openCount = 42 + Object.values(reports).filter(r=>r._new).length;
+    $('#stOpen').textContent = openCount;
+    showPreview(previewId);
+  }
+  function showPreview(id){
+    previewId = id;
+    $('#sheetDefault').hidden = !!id; $('#sheetPreview').hidden = !id;
+    $$('#homePins .pin').forEach(p=>p.classList.toggle('sel',p.dataset.pin===id));
+    if(!id) return;
+    const r=reports[id], s=STATUS[r.status];
+    $('#pvArt').innerHTML = art(r);
+    $('#pvAddr').textContent = r.addr;
+    $('#pvSub').textContent = `${r.sub} · ${r.votes+(voted[id]?1:0)} affected`;
+    $('#pvStatus').innerHTML = `<span class="status ${s.cls}"><i></i>${s.txt}</span>`;
+    const vb=$('#pvVote');
+    vb.style.display = (r.status==='done'||r._new) ? 'none' : '';
+    vb.textContent = voted[id] ? 'Confirmed' : meToo(r);
+    vb.className = 'btn ' + (voted[id]?'btn-signal':'btn-ghost');
+  }
+  $('#homeMap').addEventListener('click',e=>{
+    const p=e.target.closest('[data-pin]');
+    if(p){ showPreview(p.dataset.pin); return; }
+    if(!e.target.closest('button')) showPreview(null);
+  });
+  $('#pvClose').addEventListener('click',()=>showPreview(null));
+  $('#pvOpen').addEventListener('click',()=>{ detailId=previewId; go('report-detail'); });
+  $('#pvVote').addEventListener('click',()=>{ toggleVote(previewId); showPreview(previewId); });
+  $$('#legend .chip').forEach(c=>c.addEventListener('click',()=>{
+    const k=c.dataset.layer; layers[k]=!layers[k];
+    c.classList.toggle('off',!layers[k]); c.setAttribute('aria-pressed',layers[k]);
+    if(previewId && statusKey(reports[previewId])===k && !layers[k]) previewId=null;
+    renderHome();
+  }));
+  $('#startReport').addEventListener('click',()=>{
+    if(savedDraft){ toast('You have an unfinished report', {label:'Start new', fn:()=>{savedDraft=null; startFlow();}}); resumeDraft(); return; }
+    startFlow();
+  });
+  function startFlow(cat){
+    draft=freshDraft();
+    if(typeof cat==='string' && CATS[cat]){ draft.cat=cat; draft.issue=CATS[cat].issue?.[0]||''; }
+    resetFlowUI(); hist=['home']; go('locate',{replace:true});
+  }
+
+  /* ---------- category ---------- */
+  function renderCats(){
+    $('#catGrid').innerHTML = Object.entries(CATS).map(([k,c])=>`<button class="cat" data-cat="${k}">
+      <span class="ci" style="background:${c.bg};color:${c.fg}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${c.icon}</svg></span>
+      <span><b>${c.label}</b><small>${c.desc}</small></span></button>`).join('');
+  }
+  $('#catGrid').addEventListener('click',e=>{
+    const b=e.target.closest('[data-cat]'); if(!b) return;
+    startFlow(b.dataset.cat);
+  });
+  function resumeDraft(){ draft=savedDraft; savedDraft=null; resetFlowUI(); hist=['home']; go(draft.step,{replace:true}); toast('Draft restored'); }
+  $('#resumeDraft').addEventListener('click',resumeDraft);
+
+  /* ---------- exit dialog ---------- */
+  function openExit(){
+    const hasWork = draft.photos.length || draft.notes || draft.haz.length || draft.step!=='locate';
+    if(!hasWork){ hist=[]; go('home',{back:true}); return; }
+    $('#exitScrim').classList.add('show'); $('#saveDraft').focus();
+  }
+  const closeExit = () => $('#exitScrim').classList.remove('show');
+  $('#keepEditing').addEventListener('click',closeExit);
+  $('#exitScrim').addEventListener('click',e=>{ if(e.target.id==='exitScrim') closeExit(); });
+  $('#saveDraft').addEventListener('click',()=>{ savedDraft=draft; closeExit(); hist=[]; go('home',{back:true}); toast('Draft saved on this phone'); });
+  $('#discardDraft').addEventListener('click',()=>{
+    const d=draft; closeExit(); draft=freshDraft(); hist=[]; go('home',{back:true});
+    toast('Report discarded',{label:'Undo',fn:()=>{savedDraft=d; renderHome();}});
+  });
+
+  /* ---------- search ---------- */
+  function renderResults(){
+    $('#searchTitle').textContent = searchMode==='place' ? 'Add a place' : 'Find a location';
+    const q = $('#searchInput').value.trim().toLowerCase();
+    const terms = q.split(/\s+|&|and/).filter(Boolean);
+    let list = PLACES.filter(p=>terms.every(t=>(p.a+' '+p.s).toLowerCase().includes(t)));
+    const rx = terms.length ? new RegExp('('+terms.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')','ig') : null;
+    const hi = s => rx ? s.replace(rx,'<mark>$1</mark>') : s;
+    const near = r => Object.values(reports).find(x=>x.status!=='done' && Math.hypot(x.fx-r.fx,x.fy-r.fy)<.06);
+    let html = `<button class="result" data-place="gps"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="6"/></svg></div><div><b>Use my current location</b><small>418 Maple St</small></div></button>`;
+    html += list.map(p=>{ const n=near(p); return `<button class="result" data-place="${PLACES.indexOf(p)}"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></div><div><b>${hi(p.a)}</b><small>${p.s}${n?' · <span style="color:var(--warn);font-weight:700">already reported</span>':''}</small></div></button>`;}).join('');
+    if(!list.length) html += `<div class="result"><div><b>No matches</b><small>Try a nearby cross street, or drop the pin on the map.</small></div></div>`;
+    $('#results').innerHTML = html;
+    setTimeout(()=>$('#searchInput').focus(),50);
+  }
+  $('#searchInput').addEventListener('input',renderResults);
+  $('#results').addEventListener('click',e=>{
+    const b=e.target.closest('[data-place]'); if(!b) return;
+    const p = b.dataset.place==='gps' ? PLACES[0] : PLACES[+b.dataset.place];
+    $('#searchInput').value='';
+    if(searchMode==='place'){
+      if(savedPlaces.some(x=>x.addr.startsWith(p.a))){ toast('Already in your places'); back(); return; }
+      savedPlaces.push({id:'pl'+Date.now(),name:p.a,addr:p.s,kind:'pin',road:true,reps:true,radius:1});
+      back(); toast('Place saved. Alerts are on.'); return;
+    }
+    if(searchMode==='browse'){
+      // jump into a new report already centered here
+      draft=freshDraft(); resetFlowUI(); hist=['home'];
+    } else { hist.pop(); }
+    draft.fx=p.fx; draft.fy=p.fy; draft.addr=p.a; draft.sub=p.s;
+    go('locate',{replace:true});
+  });
+
+  /* ---------- locate: draggable map ---------- */
+  const pan=$('#locPan'), locMap=$('#locMap');
+  let dx=0, dy=0, hintShown=false;
+  function layerSize(){ const r=locMap.getBoundingClientRect(); return {W:r.width, H:r.height, LW:r.width+300, LH:r.height+300}; }
+  function applyPan(){ pan.style.transform=`translate(${dx}px,${dy}px)`; }
+  function centerOn(fx,fy){ const {LW,LH}=layerSize(); dx=LW*(.5-fx); dy=LH*(.5-fy); clamp(); applyPan(); }
+  function clamp(){ dx=Math.max(-150,Math.min(150,dx)); dy=Math.max(-150,Math.min(150,dy)); }
+  function pinFrac(){ const {W,H,LW,LH}=layerSize(); return {fx:(150+W/2-dx)/LW, fy:(150+H/2-dy)/LH}; }
+  function enterLocate(){
+    $('#locMarkers').innerHTML = Object.entries(reports).filter(([k,r])=>r.status!=='done').map(([k,r])=>
+      `<span class="mini-pin" style="left:${r.fx*100}%;top:${r.fy*100}%;background:${r.status==='prog'?'var(--blue)':r.status==='rec'?'var(--signal)':'var(--warn)'}"></span>`).join('');
+    requestAnimationFrame(()=>{ centerOn(draft.fx,draft.fy); resolveLocation(true); });
+    $('#dragHint').classList.toggle('gone',hintShown);
+    $('#confirmLoc').textContent = draft.returnToReview ? 'Save location' : 'Confirm location';
+  }
+  function resolveLocation(keepAddr){
+    const {fx,fy}=pinFrac(); draft.fx=fx; draft.fy=fy;
+    if(!keepAddr){
+      let best=PLACES[0], bd=9; PLACES.forEach(p=>{const d=Math.hypot(p.fx-fx,p.fy-fy); if(d<bd){bd=d;best=p;}});
+      draft.addr = bd<.05 ? best.a : 'Near ' + best.a; draft.sub = best.s;
+    }
+    $('#addrLine').textContent=draft.addr; $('#addrSub').textContent=draft.sub;
+    $('#planNote').classList.toggle('show', draft.cat==='pothole' && Math.abs(fy-.23)<.04 && fx>.3 && fx<.72);
+    const dupEntry = Object.entries(reports).find(([k,r])=>r.cat===draft.cat && r.status!=='done' && Math.hypot(r.fx-fx,r.fy-fy)<.06);
+    const box=$('#dupBox');
+    if(dupEntry && !draft.dupDismissed){
+      const [k,r]=dupEntry; box.dataset.id=k;
+      $('#dupText').innerHTML = `${r.addr} was reported ${r.date==='Today'?'today':'on '+r.date} (${r.votes+(voted[k]?1:0)} neighbors). ${STATUS[r.status].txt}. <button class="link" data-detail="${k}">View it</button>`;
+      box.classList.add('show'); $('#confirmLoc').style.display='none';
+    } else { box.classList.remove('show'); $('#confirmLoc').style.display=''; }
+  }
+  let drag=null;
+  locMap.addEventListener('pointerdown',e=>{
+    if(e.target.closest('button')) return;
+    drag={x:e.clientX,y:e.clientY,dx,dy}; pan.classList.add('dragging'); $('#crosshair').classList.add('lift');
+    locMap.setPointerCapture(e.pointerId);
+    hintShown=true; $('#dragHint').classList.add('gone');
+  });
+  locMap.addEventListener('pointermove',e=>{ if(!drag) return; dx=drag.dx+e.clientX-drag.x; dy=drag.dy+e.clientY-drag.y; clamp(); applyPan(); });
+  const endDrag=()=>{ if(!drag) return; drag=null; pan.classList.remove('dragging'); $('#crosshair').classList.remove('lift'); draft.dupDismissed=false; resolveLocation(false); };
+  locMap.addEventListener('pointerup',endDrag); locMap.addEventListener('pointercancel',endDrag);
+  $('#gps').addEventListener('click',()=>{
+    if(!locPerm){ toast('Location is off. Turn it on in Profile or drag the map.'); return; }
+    draft.dupDismissed=false; centerOn(PLACES[0].fx,PLACES[0].fy); draft.addr=PLACES[0].a; draft.sub=PLACES[0].s; resolveLocation(true); toast('Using your current location');
+  });
+  $('#dupDifferent').addEventListener('click',()=>{ draft.dupDismissed=true; resolveLocation(true); });
+  $('#dupConfirm').addEventListener('click',()=>{
+    const k=$('#dupBox').dataset.id; if(!voted[k]) toggleVote(k,true); followed[k]=true;
+    draft=freshDraft(); resetFlowUI(); detailId=k; hist=['home']; go('report-detail',{replace:true});
+    toast('Added your +1. You\'ll get updates on this one.');
+  });
+  $('#confirmLoc').addEventListener('click',()=>{
+    $('#camLoc').textContent=draft.addr;
+    if(draft.returnToReview){ draft.returnToReview=false; hist.pop(); go('review',{back:true}); } else go('photo');
+  });
+
+  /* ---------- photo ---------- */
+  function renderThumbs(){
+    const wrap=$('#thumbs'); wrap.innerHTML='';
+    draft.photos.forEach((p,i)=>{
+      const d=document.createElement('div'); d.className='thumb';
+      d.innerHTML=(p.url?`<img src="${p.url}" alt="Photo ${i+1}">`:`<svg viewBox="0 0 300 300"><use href="#${p.art}"/></svg>`)+`<button aria-label="Remove photo ${i+1}">&times;</button>`;
+      d.querySelector('button').onclick=()=>{ const rm=draft.photos.splice(i,1)[0]; renderThumbs(); toast('Photo removed',{label:'Undo',fn:()=>{draft.photos.splice(i,0,rm);renderThumbs();}}); };
+      wrap.appendChild(d);
+    });
+    const labels=['Close-up','Wide shot','Extra'];
+    for(let i=draft.photos.length;i<3;i++){const e=document.createElement('div');e.className='thumb empty';e.textContent=labels[i];wrap.appendChild(e);}
+    const n=draft.photos.length;
+    $('#photoNext').disabled = n===0;
+    $('#photoNext').textContent = draft.returnToReview ? 'Save photos' : 'Continue';
+    const cc = CATS[draft.cat];
+    $('#camArt').setAttribute('href','#'+cc.art);
+    $('#camTip').textContent = n===0 ? (cc.tip || 'Close-up first. Include a shoe or cone for scale.') : draft.cat!=='pothole' && n===1 ? 'Now a wider shot so the crew can find it.' :n===1 ? 'Now step back for a wide shot of the street.' : n===2 ? 'Great. Add one more or continue.' : 'All set.';
+    $('#camLoc').textContent=draft.addr;
+  }
+  $('#shutter').addEventListener('click',()=>{
+    if(draft.photos.length>=3){toast('Up to 3 photos');return;}
+    const f=$('#flash'); f.classList.remove('flash'); void f.offsetWidth; f.classList.add('flash');
+    draft.photos.push({art: draft.cat==='pothole' ? ['pothole','pothole3','pothole2'][draft.photos.length] : CATS[draft.cat].art}); renderThumbs();
+  });
+  $('#libraryBtn').addEventListener('click',()=>$('#fileInput').click());
+  $('#fileInput').addEventListener('change',e=>{
+    const files=[...e.target.files].slice(0,3-draft.photos.length);
+    files.forEach(f=>draft.photos.push({url:URL.createObjectURL(f)}));
+    if(e.target.files.length>files.length) toast('Only the first 3 photos were added');
+    e.target.value=''; renderThumbs();
+  });
+  function photoDone(){ if(draft.returnToReview){ draft.returnToReview=false; hist.pop(); go('review',{back:true}); } else go('details'); }
+  $('#photoNext').addEventListener('click',e=>{ e.stopPropagation(); photoDone(); });
+  $('#skipPhoto').addEventListener('click',photoDone);
+
+  /* ---------- details ---------- */
+  function resetFlowUI(){
+    const c = CATS[draft.cat], isPh = draft.cat==='pothole';
+    $('#sizeGroup').style.display = isPh ? '' : 'none';
+    $('#whereGroup').style.display = isPh ? '' : 'none';
+    $('#issueGroup').style.display = isPh ? 'none' : '';
+    $('#issueOpts').innerHTML = (c.issue||[]).map(t=>`<button class="opt ${t===draft.issue?'on':''}" role="radio" aria-checked="${t===draft.issue}">${t}</button>`).join('');
+    $('[data-screen="locate"] .step-label').innerHTML = 'Step 1 of 4 &middot; Location &middot; ' + c.label;
+    $$('#sizeSeg button').forEach(x=>{const on=x.dataset.size===draft.size; x.classList.toggle('on',on); x.setAttribute('aria-checked',on);});
+    $$('#whereOpts .opt').forEach(x=>{const on=x.textContent===draft.where; x.classList.toggle('on',on); x.setAttribute('aria-checked',on);});
+    $$('#hazOpts .opt').forEach(x=>{const on=draft.haz.includes(x.textContent); x.classList.toggle('on',on); x.setAttribute('aria-pressed',on);});
+    $('#notes').value=draft.notes; $('#notesCount').textContent=draft.notes.length+' / 280';
+    setSwitch('#notifyRow',draft.notify); setSwitch('#anonRow',draft.anon);
+    $('#contact').classList.toggle('hidden',draft.anon); $('#contactLbl').style.display=draft.anon?'none':'';
+    updateSafety(); renderThumbs();
+  }
+  function setSwitch(row,on){ const r=$(row); r.setAttribute('aria-pressed',on); r.querySelector('.switch').classList.toggle('on',on); }
+  function updateSafety(){
+    const danger = draft.haz.includes('Sinkhole / road collapse') || (draft.cat==='pothole' && draft.size==='Large' && draft.haz.includes('Cars swerving'))
+      || (draft.cat==='sign' && ['Knocked down','Missing'].includes(draft.issue)) || (draft.cat==='drain' && draft.issue==='Grate missing or broken');
+    $('#safety').classList.toggle('show',danger);
+    $('#claimHint').style.display = draft.haz.includes('Damaged my car') ? 'block' : 'none';
+  }
+  $$('#sizeSeg button').forEach(b=>b.addEventListener('click',()=>{ draft.size=b.dataset.size; resetFlowUI(); }));
+  $$('#whereOpts .opt').forEach(b=>b.addEventListener('click',()=>{ draft.where=b.textContent; resetFlowUI(); }));
+  $('#issueOpts').addEventListener('click',e=>{ const b=e.target.closest('.opt'); if(!b) return; draft.issue=b.textContent; resetFlowUI(); });
+  $$('#hazOpts .opt').forEach(b=>b.addEventListener('click',()=>{
+    const t=b.textContent; draft.haz = draft.haz.includes(t) ? draft.haz.filter(x=>x!==t) : [...draft.haz,t]; resetFlowUI();
+  }));
+  $('#notes').addEventListener('input',e=>{ draft.notes=e.target.value; $('#notesCount').textContent=e.target.value.length+' / 280'; });
+  $('#notifyRow').addEventListener('click',()=>{ draft.notify=!draft.notify; setSwitch('#notifyRow',draft.notify); });
+  $('#anonRow').addEventListener('click',()=>{ draft.anon=!draft.anon; resetFlowUI(); });
+  // returning to review after editing details
+  $('[data-screen="details"] .footer .btn').addEventListener('click',()=>{ if(draft.returnToReview){ draft.returnToReview=false; hist.pop(); hist.pop(); } });
+
+  /* ---------- review ---------- */
+  function fillReview(){
+    const isPh = draft.cat==='pothole';
+    $('#rvCat').textContent = CATS[draft.cat].label + (isPh ? '' : ' · ' + draft.issue);
+    $('#rvCatEdit').style.display = isPh ? 'none' : ''; $('#rvSizeRow').style.display = isPh ? '' : 'none'; $('#rvWhereRow').style.display = isPh ? '' : 'none';
+    $('#rvAddr').textContent=draft.addr; $('#rvSize').textContent=draft.size; $('#rvWhere').textContent=draft.where;
+    $('#rvHaz').textContent=draft.haz.length?draft.haz.join(', '):'None noted';
+    $('#rvNotes').textContent=draft.notes.trim()||'None';
+    const n=draft.photos.length, hero=$('#reviewHero');
+    hero.style.display = n? 'flex':'none'; $('#noPhoto').style.display = n? 'none':'flex';
+    hero.innerHTML = draft.photos.map(p=>p.url?`<img src="${p.url}" alt="">`:`<svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice"><use href="#${p.art}" width="300" height="300" y="-60"/></svg>`).join('')
+      + `<span class="chip tag">${n} photo${n>1?'s':''}</span>`;
+  }
+
+  let ticketN=24817;
+  const ETA = {Small:'Oct 23', Medium:'Oct 20', Large:'Oct 13'};
+  $('#submitBtn').addEventListener('click',e=>{
+    const b=e.currentTarget; b.disabled=true; b.textContent='Sending...';
+    setTimeout(()=>{
+      const id='new'+ticketN; lastNewId=id;
+      const c=CATS[draft.cat], isPh=draft.cat==='pothole', tk='#'+c.prefix+'-'+ticketN;
+      const hx = Math.round(20+draft.fx*60), hy = Math.round(15+draft.fy*70);
+      const byDate = d => new Date(2026,9,6+d).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      reports[id]={cat:draft.cat,addr:draft.addr,sub:isPh?`${draft.size} · ${draft.where}`:`${c.label} · ${draft.issue}`,ticket:tk,status:'rec',art:draft.photos[0]?.art||(isPh?'pothole3':c.art),photoUrl:draft.photos.find(p=>p.url)?.url,
+        votes:1,mine:!draft.anon,date:'Today',eta:'Inspection by Oct 8',hx,hy,fx:draft.fx,fy:draft.fy,_new:true,damage:draft.haz.includes('Damaged my car'),
+        steps:[['Received','Today, just now',(draft.notify&&!draft.anon?'Confirmation sent by text. ':'')+(isPh?'':'Routed to '+c.team+'.'),2],['Inspected','','Typically within 2 business days.',0],['Repair scheduled','','',0],['Fixed','','',0]]};
+      $('#ticketNo').textContent=tk; $('#ticketAddr').textContent=draft.addr; $('#ticketEta').textContent='by '+(isPh?ETA[draft.size]:byDate(c.days));
+      const dayMap={Small:15,Medium:10,Large:5};
+      $('#doneLead').textContent = isPh
+        ? `Public Works typically inspects within 2 business days and repairs ${draft.size.toLowerCase()} potholes within ${dayMap[draft.size]}.`
+        : `Sent to ${c.team}. They typically resolve ${c.label.toLowerCase()} reports within ${c.days} day${c.days>1?'s':''}.`;
+      claimFor = id;
+      $('#claimLink').style.display = draft.haz.includes('Damaged my car') && !draft.anon ? 'block' : 'none';
+      $('#trackNew').style.display = draft.anon ? 'none' : '';
+      if(!draft.anon) notifs.unshift({id:'n'+ticketN,r:id,type:'rec',t:'Report received',p:`${draft.addr} is in the queue as ticket ${tk}.`,when:'Just now',unread:true});
+      ticketN++;
+      b.disabled=false; b.textContent='Submit report';
+      draft=freshDraft(); resetFlowUI();
+      hist=[]; go('submitted');
+    },800);
+  });
+  $('#claimLink').addEventListener('click',()=>{ hist=['home']; go('claim',{replace:true}); });
+  $('#trackNew').addEventListener('click',()=>{ detailId=lastNewId; hist=['home']; go('report-detail',{replace:true}); });
+  $('#reportAnother').addEventListener('click',()=>{ hist=[]; go('home',{replace:true}); startFlow(); });
+
+  /* ---------- my reports ---------- */
+  let filter='all';
+  $$('#filters .opt').forEach(b=>b.addEventListener('click',()=>{
+    $$('#filters .opt').forEach(x=>x.classList.remove('on')); b.classList.add('on'); filter=b.dataset.f; renderList();
+  }));
+  function renderList(){
+    const list=$('#reportList'); list.innerHTML='';
+    const items=Object.entries(reports).filter(([k,r])=>filter==='follow'?(followed[k]&&!r.mine):r.mine).reverse()
+      .filter(([k,r])=>filter==='all'||filter==='follow'||(filter==='done'?r.status==='done':r.status!=='done'));
+    if(!items.length){
+      list.innerHTML = filter==='follow'
+        ? `<div class="empty"><b>Not following anything else</b><p class="lead">Tap "Follow" on a neighbor's report to get its updates here.</p><button class="btn btn-primary btn-sm" data-go="home" style="margin:0 auto">Browse the map</button></div>`
+        : `<div class="empty"><b>Nothing here yet</b><p class="lead">Reports you send will show up here.</p><button class="btn btn-signal btn-sm" id="emptyStart" style="margin:0 auto">Report a pothole</button></div>`;
+      $('#emptyStart')?.addEventListener('click',()=>{hist=[];go('home',{replace:true});startFlow();});
+      return;
+    }
+    items.forEach(([k,r])=>{
+      const s=STATUS[r.status];
+      const el=document.createElement('button'); el.className='card item'; el.dataset.detail=k;
+      el.innerHTML=`<div class="th">${art(r)}</div>
+        <div class="meta"><b>${r.addr}</b><small>${r.sub} · ${r.date}</small><span class="status ${s.cls}"><i></i>${s.txt}</span></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9aa3ab" stroke-width="2" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>`;
+      list.appendChild(el);
+    });
+  }
+
+  /* ---------- detail ---------- */
+  function toggleVote(id, quiet){
+    voted[id]=!voted[id];
+    if(voted[id] && !quiet) toast('Thanks. Priority goes up with each confirm.', {label:'Undo',fn:()=>{voted[id]=false; if(current.dataset.screen==='report-detail') renderDetail(); else showPreview(previewId);}});
+  }
+  function renderDetail(){
+    const r=reports[detailId]; const s=STATUS[r.status];
+    $('#detailImg').innerHTML = r.photoUrl ? `<img src="${r.photoUrl}" alt="Photo of pothole">` : `<svg viewBox="0 0 390 230" preserveAspectRatio="xMidYMid slice"><use href="#${r.art}" width="390" height="390" y="-80"/></svg>`;
+    $('#dStatus').innerHTML=`<span class="status ${s.cls}"><i></i>${s.txt}</span>`;
+    $('#dTitle').textContent=r.addr;
+    $('#dSub').textContent=`${r.sub} · Ticket ${r.ticket}`;
+    const eta=$('#dEta');
+    if(r.status!=='done' && r.eta){ eta.style.display='flex'; eta.innerHTML=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><div><b>${r.status==='prog'?'Repair':'Next step'}: ${r.eta}</b>${r.status==='prog'?'Expect short lane closures while crews work.':(r.cat==='pothole'?'An inspector will measure depth and set priority.':CATS[r.cat].team+' will check it and schedule the fix.')}</div>`; }
+    else eta.style.display='none';
+    $('#voteCount').textContent=r.votes+(voted[detailId]?1:0);
+    const vb=$('#voteBtn');
+    vb.classList.toggle('on',!!voted[detailId]);
+    vb.textContent = r._new ? 'Your report' : r.status==='done' ? 'Fixed' : (voted[detailId]?'Confirmed':meToo(r));
+    vb.disabled = !!(r._new || r.status==='done');
+    const tn = (threads[detailId]||[]).filter(m=>m.who!=='sys').length;
+    $('#msgBtnTxt').textContent = r.mine ? (tn ? `Messages (${tn})` : 'Message crew') : 'Add info';
+    const cb=$('#claimBtn');
+    cb.style.display = (r.mine && r.cat==='pothole') ? '' : 'none';
+    cb.lastChild.textContent = claim && claim.report===detailId ? 'Claim filed' : 'Damage claim';
+    $('.detail-acts').style.gridTemplateColumns = cb.style.display==='none' ? '1fr' : '1fr 1fr';
+    $('#followWrap').style.display = (r.mine||r.status==='done') ? 'none' : '';
+    setSwitch('#followRow', !!followed[detailId]);
+    const rb=$('#rateBox');
+    if(r.status==='done' && r.mine){
+      rb.style.display='block';
+      rb.innerHTML = rated[detailId]
+        ? `<b>${rated[detailId]==='good'?'Glad it held up':'Thanks, we reopened it'}</b><p class="thanks">${rated[detailId]==='good'?'Your feedback helps Public Works rate repair crews and materials.':'An inspector will check the patch again within 5 business days.'}</p>`
+        : `<b>How did the repair turn out?</b><p class="thanks">Your feedback goes straight to the repair crew.</p><div class="rate-btns"><button class="btn btn-ghost" data-rate="good">Looks good</button><button class="btn btn-ghost" data-rate="bad">Still a problem</button></div>`;
+    } else rb.style.display='none';
+    $('#dTimeline').innerHTML=r.steps.map(([t,d,p,st])=>`<div class="tl ${st===1?'on':st===2?'now':st===3?'reopen':''}"><b>${t}</b>${d?`<small>${d}</small>`:''}${p?`<p>${p}</p>`:''}</div>`).join('');
+  }
+  $('#voteBtn').addEventListener('click',()=>{ toggleVote(detailId); renderDetail(); });
+  $('#msgBtn').addEventListener('click',()=>{ threadId=detailId; go('thread'); });
+  $('#claimBtn').addEventListener('click',()=>{
+    if(claim && claim.report===detailId){ toast(`Claim ${claim.no} is under review with the City Clerk`); return; }
+    claimFor=detailId; go('claim');
+  });
+  $('#followRow').addEventListener('click',()=>{ followed[detailId]=!followed[detailId]; renderDetail(); toast(followed[detailId]?'Following. We\'ll text you updates.':'Unfollowed'); });
+  $('#rateBox').addEventListener('click',e=>{
+    const b=e.target.closest('[data-rate]'); if(!b) return;
+    rated[detailId]=b.dataset.rate;
+    if(b.dataset.rate==='bad'){ const r=reports[detailId]; r.status='open'; r.eta='Re-inspection by Oct 13'; r.steps.push(['Reopened','Today','You reported the patch is failing.',3]); }
+    renderDetail();
+  });
+
+  /* ---------- updates ---------- */
+  const NIC = {
+    prog:['#e1eafb','var(--blue)','<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'],
+    vote:['#fff4cc','#7a5b00','<path d="M7 11v9H4v-9zM7 11l4-8a2 2 0 0 1 2 2v4h6a2 2 0 0 1 2 2l-2 7a2 2 0 0 1-2 2H7"/>'],
+    done:['#ddf3e8','var(--go)','<path d="M5 12.5l4.5 4.5L19 7"/>'],
+    insp:['#f0eee8','var(--muted)','<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>'],
+    rec:['#fff4cc','#7a5b00','<path d="M4 4h16v12H8l-4 4z"/>'],
+    msg:['#e1eafb','var(--blue)','<path d="M4 4h16v12H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'],
+    road:['#ffe6d4','#b4520c','<path d="M9.5 3h5l4.5 15H5z"/><path d="M7.5 10h9M6.3 14h11.4"/><path d="M3 21h18"/>'],
+    claim:['#f0eee8','var(--ink)','<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/>']
+  };
+  function renderNotifs(){
+    const list=$('#notifList');
+    if(!notifs.length){ list.innerHTML='<div class="empty"><b>All quiet</b><p class="lead">Status changes on your reports show up here.</p></div>'; return; }
+    list.innerHTML = notifs.map(n=>{ const [bg,fg,ic]=NIC[n.type];
+      return `<button class="notif ${n.unread?'unread':''}" data-n="${n.id}"><div class="ic" style="background:${bg};color:${fg}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${ic}</svg></div><div><b>${n.t}</b><p>${n.p}</p><small>${n.when}${n.unread?' · unread':''}</small></div></button>`; }).join('');
+    $('#markRead').style.visibility = notifs.some(n=>n.unread) ? 'visible':'hidden';
+  }
+  $('#notifList').addEventListener('click',e=>{
+    const b=e.target.closest('[data-n]'); if(!b) return;
+    const n=notifs.find(x=>x.id===b.dataset.n); n.unread=false;
+    if(n.type==='road'){ openRoad(n.proj); return; }
+    if(n.type==='msg'){ threadId=n.r; go('thread'); return; }
+    detailId=n.r; go('report-detail');
+  });
+  $('#markRead').addEventListener('click',()=>{ notifs.forEach(n=>n.unread=false); renderNotifs(); renderTabbars(); toast('All caught up'); });
+
+  /* ---------- profile ---------- */
+  function renderProfile(){
+    const mine=Object.values(reports).filter(r=>r.mine);
+    $('#pfTotal').textContent=mine.length;
+    $('#pfFixed').textContent=mine.filter(r=>r.status==='done').length;
+    $('#pfConf').textContent=9+Object.values(voted).filter(Boolean).length;
+    $('#pfPlaces').innerHTML = savedPlaces.length + ' place' + (savedPlaces.length===1?'':'s') + ' &rsaquo;';
+    const pc=$('#pfClaim');
+    if(claim){
+      pc.style.display='block';
+      pc.innerHTML=`<div class="label">Damage claim</div>
+        <div class="row"><span>Claim</span><b>${claim.no}</b></div>
+        <div class="row"><span>Report</span><b>${reports[claim.report].addr}</b></div>
+        <div class="row"><span>Amount</span><b>${claim.cost}</b></div>
+        <div class="row"><span>Status</span><b><span class="status s-prog" style="margin:0"><i></i>Under review</span></b></div>
+        <p class="fine" style="margin:8px 0 0">The City Clerk responds within 15 business days. An adjuster may call you.</p>`;
+      $('#pfClaimSub').textContent='1 under review';
+    } else { pc.style.display='none'; $('#pfClaimSub').innerHTML='&rsaquo;'; }
+  }
+  $('#pfClaimBtn').addEventListener('click',()=>{
+    if(claim){ $('#pfClaim').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    const mine=Object.entries(reports).filter(([k,r])=>r.mine && r.cat==='pothole').map(([k])=>k);
+    claimFor = mine.includes(lastNewId) ? lastNewId : 'r5'; go('claim');
+  });
+
+  /* ---------- roadwork ---------- */
+  function openRoad(id){
+    const p=PROJECTS[id]; if(!p) return;
+    roadFocus=id; roadTab=p.tab; go('roadwork');
+  }
+  function renderRoad(){
+    $$('#roadTabs button').forEach(b=>{ const on=b.dataset.rt===roadTab; b.classList.toggle('on',on); b.setAttribute('aria-selected',on); });
+    $('#roadCallout').style.display = roadTab==='done' ? 'none' : '';
+    const items=Object.entries(PROJECTS).filter(([k,p])=>p.tab===roadTab);
+    $('#roadList').innerHTML = items.map(([k,p])=>`<div class="card proj ${roadFocus===k?'hl':''}" id="proj-${k}">
+      <div class="proj-top"><span class="ci" style="background:${p.tab==='done'?'#ddf3e8':'#ffe6d4'};color:${p.tab==='done'?'var(--go)':'#b4520c'}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${p.tab==='done'?'<path d="M5 12.5l4.5 4.5L19 7"/>':NIC.road[2]}</svg></span>
+        <div><b>${p.name}</b><div class="when">${p.extent} · ${p.when}</div></div></div>
+      <p>${p.desc}</p>
+      <div class="tags">${p.tags.map(([t,h])=>`<span class="tag-s ${h?'hot':''}">${t}</span>`).join('')}</div>
+      ${p.tab!=='done'?`<div class="proj-act"><button class="btn btn-ghost" data-proj-map="${k}">Show on map</button>
+        <button class="btn ${p.notify?'btn-signal':'btn-ghost'}" data-proj-notify="${k}" aria-pressed="${p.notify}">${p.notify?'Alerts on':'Alert me'}</button></div>`:''}
+    </div>`).join('') || '<div class="empty"><b>Nothing scheduled</b><p class="lead">Check back soon.</p></div>';
+    if(roadFocus){ const el=$('#proj-'+roadFocus); if(el) requestAnimationFrame(()=>el.scrollIntoView({block:'center'})); roadFocus=null; }
+  }
+  $('#roadTabs').addEventListener('click',e=>{ const b=e.target.closest('[data-rt]'); if(!b) return; roadTab=b.dataset.rt; renderRoad(); });
+  $('#roadList').addEventListener('click',e=>{
+    const n=e.target.closest('[data-proj-notify]');
+    if(n){ const p=PROJECTS[n.dataset.projNotify]; p.notify=!p.notify; renderRoad(); toast(p.notify?'We\'ll text you before work starts and when lanes reopen.':'Alerts off for this project'); return; }
+    const m=e.target.closest('[data-proj-map]');
+    if(m){ layers.road=true; $('#legend [data-layer="road"]').classList.remove('off'); hist=[]; go('home'); toast(PROJECTS[m.dataset.projMap].name); }
+  });
+
+  /* ---------- saved places ---------- */
+  const PIC = {home:'<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>', route:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6"/>', pin:'<path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'};
+  function renderPlaces(){
+    const list=$('#placeList');
+    if(!savedPlaces.length){ list.innerHTML='<div class="empty"><b>No saved places</b><p class="lead">Add home, work, or a school to get alerts there.</p></div>'; return; }
+    list.innerHTML = savedPlaces.map(p=>`<div class="card place" data-pid="${p.id}">
+      <div class="place-top"><span class="ci"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${PIC[p.kind]}</svg></span>
+        <div style="min-width:0"><b>${p.name}</b><small>${p.addr}</small></div>
+        <button class="icon-btn x" data-rm="${p.id}" aria-label="Remove ${p.name}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div class="mini-toggles">
+        <button data-pt="road" aria-pressed="${p.road}">Roadwork &amp; closures <span class="switch ${p.road?'on':''}"></span></button>
+        <button data-pt="reps" aria-pressed="${p.reps}">New reports nearby <span class="switch ${p.reps?'on':''}"></span></button>
+        ${p.kind==='route'?'':`<div class="radius" role="radiogroup" aria-label="Alert distance">${RADII.map((r,i)=>`<button role="radio" aria-checked="${p.radius===i}" class="${p.radius===i?'on':''}" data-rad="${i}">${r}</button>`).join('')}</div>`}
+      </div></div>`).join('');
+  }
+  $('#placeList').addEventListener('click',e=>{
+    const card=e.target.closest('[data-pid]'); if(!card) return;
+    const i=savedPlaces.findIndex(p=>p.id===card.dataset.pid), p=savedPlaces[i];
+    const rm=e.target.closest('[data-rm]');
+    if(rm){ savedPlaces.splice(i,1); renderPlaces(); toast(p.name+' removed',{label:'Undo',fn:()=>{savedPlaces.splice(i,0,p); renderPlaces();}}); return; }
+    const t=e.target.closest('[data-pt]'); if(t){ p[t.dataset.pt]=!p[t.dataset.pt]; renderPlaces(); return; }
+    const r=e.target.closest('[data-rad]'); if(r){ p.radius=+r.dataset.rad; renderPlaces(); }
+  });
+
+  /* ---------- damage claim ---------- */
+  let certified=false;
+  function renderClaim(){
+    const r=reports[claimFor] || reports.r5;
+    $('#claimLinked').innerHTML=`<div class="th">${art(r)}</div><div><b>${r.addr}</b><small>Ticket ${r.ticket} · reported ${r.date==='Today'?'today':r.date}</small></div>`;
+    certified=false; $('#certify').classList.remove('on'); $('#certify').setAttribute('aria-pressed','false');
+    $('#claimSubmit').disabled=true; $('#claimSubmit').textContent='Submit claim';
+  }
+  $('#dmgOpts').addEventListener('click',e=>{ const b=e.target.closest('.opt'); if(!b) return; const on=!b.classList.contains('on'); b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); });
+  $('#upEst').addEventListener('click',()=>toast('Estimate attached'));
+  $('#upPhotos').addEventListener('click',e=>{ const b=e.currentTarget; b.classList.add('ok'); b.querySelector('small').textContent='2 photos added, plus report photos'; b.querySelector('svg').outerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--go)" stroke-width="2.2"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'; });
+  $('#certify').addEventListener('click',e=>{ certified=!certified; e.currentTarget.classList.toggle('on',certified); e.currentTarget.setAttribute('aria-pressed',certified); $('#claimSubmit').disabled=!certified; });
+  $('#claimSubmit').addEventListener('click',e=>{
+    const b=e.currentTarget; b.disabled=true; b.textContent='Sending to City Clerk...';
+    setTimeout(()=>{
+      const id = reports[claimFor] ? claimFor : 'r5';
+      claim={no:'CL-2026-1043',report:id,cost:$('#cCost').value||'Not given'};
+      reports[id].steps.splice(1,0,['Damage claim filed','Today','Claim '+claim.no+' sent to the City Clerk.',1]);
+      notifs.unshift({id:'nc',r:id,type:'claim',t:'Claim received',p:`City Clerk received claim ${claim.no}. Expect a response within 15 business days.`,when:'Just now',unread:true});
+      detailId=id; hist=['home']; go('report-detail',{replace:true});
+      toast('Claim '+claim.no+' filed. Track it in Profile.');
+    },900);
+  });
+
+  /* ---------- city stats ---------- */
+  const STATS = {
+    '30': {avg:'6.8',avgD:'1.2 days faster',ontime:'81%',otD:'+6 pts',fixed:'412',fxD:'+38 vs. last month',open:'138',opD:'+12 open',wards:[5.2,7.9,6.1,11.4,8.3],
+           rep:[22,30,26,41,38,29,24,33,45,39,31,28],fix:[18,24,27,30,36,33,28,30,34,40,37,35],axis:'Last 30 days'},
+    '90': {avg:'7.4',avgD:'0.6 days faster',ontime:'76%',otD:'+3 pts',fixed:'1,180',fxD:'+9%',open:'138',opD:'-21 open',wards:[5.9,8.4,6.6,12.2,9.0],
+           rep:[90,110,140,120,105,98,112,130,125,118,101,96],fix:[80,96,104,118,122,110,104,115,126,120,112,108],axis:'Last 90 days'},
+    '365':{avg:'8.9',avgD:'1.8 days slower',ontime:'69%',otD:'-4 pts',fixed:'4,315',fxD:'+14%',open:'138',opD:'-64 open',wards:[7.1,9.8,8.2,13.5,10.4],
+           rep:[210,340,520,610,480,360,300,280,310,330,390,450],fix:[190,260,380,520,560,430,350,300,300,320,340,410],axis:'Last 12 months'}
+  };
+  function renderStats(){
+    const s=STATS[statRange];
+    $$('#rangeTabs button').forEach(b=>{ const on=b.dataset.range===statRange; b.classList.toggle('on',on); b.setAttribute('aria-selected',on); });
+    $('#kpis').innerHTML = [
+      [s.avg+'<small style="display:inline;font-size:14px"> days</small>','Average time to fix a pothole, citywide',s.avgD,/faster/.test(s.avgD)?'up':'down'],
+      [s.ontime,'Fixed within the 10-day goal',s.otD,/^\+/.test(s.otD)?'up':'down'],
+      [s.fixed,'Potholes fixed',s.fxD,'up'],
+      [s.open,'Open right now, waiting on a crew',s.opD,/^-/.test(s.opD)?'up':'down']
+    ].map(([v,l,d,c])=>`<div class="card kpi"><b>${v}</b><small>${l}</small><div class="delta ${c}">${d}</div></div>`).join('');
+    const max=15;
+    $('#wardBars').innerHTML = s.wards.map((v,i)=>`<div class="bar-row ${i===2?'me':''}"><span>Ward ${i+1}${i===2?' (you)':''}</span>
+      <div class="track"><div class="fill" style="width:${v/max*100}%"></div><div class="goal" style="left:${10/max*100}%"></div></div><span>${v}d</span></div>`).join('');
+    const all=[...s.rep,...s.fix], hi=Math.max(...all)*1.1;
+    const pts = arr => arr.map((v,i)=>`${(i/(arr.length-1)*296+2).toFixed(1)},${(86-v/hi*80).toFixed(1)}`).join(' ');
+    $('#sparkWrap').innerHTML = `<svg viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="Reported versus fixed potholes, ${s.axis}">
+      <path d="M0 86 H300" stroke="var(--line)" stroke-width="1"/>
+      <polyline points="${pts(s.rep)}" fill="none" stroke="var(--warn)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      <polyline points="${pts(s.fix)}" fill="none" stroke="var(--go)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
+      <div class="bar-note" style="justify-content:space-between;margin-top:4px"><span>${s.axis}</span><span>Today</span></div>`;
+  }
+  $('#rangeTabs').addEventListener('click',e=>{ const b=e.target.closest('[data-range]'); if(!b) return; statRange=b.dataset.range; renderStats(); });
+
+  /* ---------- message thread ---------- */
+  function renderThread(){
+    const r=reports[threadId]; if(!threads[threadId]) threads[threadId]=[{who:'sys',t:`Messages go to the ${CATS[r.cat].team} team. Replies usually within 1 business day.`}];
+    $('#threadHead').innerHTML=`<div class="th">${art(r)}</div><div style="flex:1;min-width:0"><b>${r.addr}</b><small>Ticket ${r.ticket} · ${STATUS[r.status].txt}</small></div><button class="link" data-detail="${threadId}">View</button>`;
+    $('#thread').innerHTML = threads[threadId].map(m=>`<div class="msg ${m.who}">${m.name?`<b style="display:block;font-size:12px;margin-bottom:2px">${m.name}</b>`:''}${m.t}${m.when?`<small>${m.when}</small>`:''}</div>`).join('');
+    requestAnimationFrame(()=>{ const t=$('#thread'); t.scrollTop=t.scrollHeight; });
+  }
+  function sendMsg(text){
+    text=text.trim(); if(!text) return;
+    const tid=threadId, th=threads[tid];
+    th.push({who:'me',t:text.replace(/</g,'&lt;'),when:'Just now'}); $('#msgInput').value=''; renderThread();
+    setTimeout(()=>{ th.push({who:'them typing',t:'Public Works is typing...'}); if(current.dataset.screen==='thread'&&threadId===tid) renderThread(); },700);
+    setTimeout(()=>{
+      th.pop();
+      const lower=text.toLowerCase(), tk=reports[tid].ticket;
+      const reply = /bigger|worse|deeper/.test(lower) ? `Thanks for the update. I've flagged ${tk} for re-inspection and bumped its priority.`
+        : /another|second|nearby/.test(lower) ? 'Good catch. If you can, drop a pin on that one too so it gets its own ticket. Our crew will look at both.'
+        : /update|when|date/.test(lower) ? `${tk} is ${STATUS[reports[tid].status].txt.toLowerCase()}. ${reports[tid].eta?'Current estimate: '+reports[tid].eta+'.':''}`
+        : /thank/.test(lower) ? 'Happy to help. Thanks for reporting it.'
+        : `Got it. This is attached to ${tk} and the crew lead will see it.`;
+      th.push({who:'them',name:'Dana R., '+CATS[reports[tid].cat].team,t:reply,when:'Just now'});
+      if(current.dataset.screen==='thread'&&threadId===tid) renderThread();
+    },2000);
+  }
+  $('#composer').addEventListener('submit',e=>{ e.preventDefault(); sendMsg($('#msgInput').value); });
+  $('#quick').addEventListener('click',e=>{ const b=e.target.closest('[data-q]'); if(b) sendMsg(b.dataset.q); });
+  $$('.pref').forEach(b=>b.addEventListener('click',()=>{
+    const on=b.getAttribute('aria-pressed')!=='true'; b.setAttribute('aria-pressed',on); b.querySelector('.switch').classList.toggle('on',on);
+    if(b.id==='largeText'){ $('#device').style.zoom = on?1.08:''; }
+  }));
+  const langs=['English','Español','Tiếng Việt','中文'];
+  $('#langBtn').addEventListener('click',()=>{ const i=(langs.indexOf($('#langVal').textContent)+1)%langs.length; $('#langVal').textContent=langs[i]; toast('Language: '+langs[i]); });
+
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('#exitScrim').classList.contains('show')) closeExit(); });
+
+  resetFlowUI();
+  go('welcome');
+})();
+</script>
+</body>
+</html>

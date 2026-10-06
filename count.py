@@ -23,6 +23,12 @@ RUNS = {
     "D3": "D3_address_first.html",
     "E": "E_scoped_polished.html",
     "F": "F_scoped_three_fidelities.html",
+    "U1": "U1_unscoped_round1.html",
+    "U2": "U2_unscoped_round2.html",
+    "U3": "U3_unscoped_round3.html",
+    "S1": "S1_scoped_round1.html",
+    "S2": "S2_scoped_round2.html",
+    "S3": "S3_scoped_round3.html",
 }
 RERENDERS = {"B": "A", "B2": "A", "E": "C"}
 
