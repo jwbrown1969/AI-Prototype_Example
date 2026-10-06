@@ -10,11 +10,11 @@ Build a clickable prototype of a mobile web app that lets residents report potho
 
 ## B: re-render with placeholder text
 
-Re-render the prototype in /home/claude/demo/prototypes/A_unscoped_polished.html as a hand-drawn grayscale wireframe with placeholder text, no color or imagery.
+Re-render the prototype in prototypes/A_unscoped_polished.html as a hand-drawn grayscale wireframe with placeholder text, no color or imagery.
 
 ## B2: re-render keeping copy
 
-Re-render the prototype in /home/claude/demo/prototypes/A_unscoped_polished.html as a hand-drawn grayscale wireframe, no color or imagery. Keep every screen, label, question, option, and line of copy exactly as it appears in the original.
+Re-render the prototype in prototypes/A_unscoped_polished.html as a hand-drawn grayscale wireframe, no color or imagery. Keep every screen, label, question, option, and line of copy exactly as it appears in the original.
 
 ## C: scoped sketch
 
@@ -34,4 +34,4 @@ The C prompt, with one line added before the render instruction:
 
 ## E: scoped sketch re-rendered as polished
 
-Re-render the prototype in /home/claude/ai-prototype_example/prototypes/C_scoped_sketch.html as a polished, finished-looking mobile interface with real visual design: color, typography, and icons. Keep every screen, label, question, option, and line of copy exactly as it appears in the original.
+Re-render the prototype in prototypes/C_scoped_sketch.html as a polished, finished-looking mobile interface with real visual design: color, typography, and icons. Keep every screen, label, question, option, and line of copy exactly as it appears in the original.

@@ -17,9 +17,9 @@ Open `index.html` for the guided page. Each prototype in `prototypes/` was gener
 | D1–D3 | Same scope, three different starting points, sketch | 3 each | n/a | 57 s, 45 s, 42 s |
 | E | C re-rendered as a polished interface, keeping every label and line of copy | 3 | 100% | 105 s |
 
-Every prompt, scoped or not, ended with the same technical block, which includes "Do not ask questions; make your own decisions." Scope was the only design difference between A and C.
+Every prompt, scoped or not, ended with the same technical block, which includes "Do not ask questions; make your own decisions." Apart from C's rendering instruction (a hand-drawn grayscale wireframe), scope was the only difference between the prompts for A and C.
 
-Unrequested additions in the scoped builds: C, D1, and D2 each added an optional note field; D1 added an address search and "No account needed"; D3 added an optional rough-size choice; E added street labels and zoom buttons to the map.
+Unrequested additions in the scoped builds: C, D1, and D2 each added an optional note field; D1 added an address search and "No account needed"; D3 added an optional rough-size choice; E added street labels and zoom buttons to the map. Placeholder text varied: D2 filled its body copy with lorem ipsum, and C and E use it in the note field's placeholder.
 
 ## Reproducing the counts
 
