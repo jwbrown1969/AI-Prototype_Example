@@ -24,7 +24,7 @@ Every prompt, scoped or not, ended with the same technical block, which includes
 
 Unrequested additions in the scoped builds: C, D1, and D2 each added an optional note field; D1 added an address search and "No account needed"; D3 added an optional rough-size choice; E added street labels and zoom buttons to the map; F added street labels to the map and a line of helper text on the photo step. Placeholder text varied: D2 filled its body copy with lorem ipsum, and C and E use it in the note field's placeholder.
 
-F's three fidelities share one set of screens and one set of words: the switch changes a single style attribute on the page, so changing fidelity cannot change content.
+F's three fidelities share one set of screens and one set of words: the switch changes a single style attribute on the page, so changing fidelity cannot change content. F came back working on the first attempt; no run in this repository was regenerated or selected from several tries.
 
 Follow-up rounds: the scoped arm held at 3 screens but grew within them, from about 70 words to about 330, adding size and position questions, a marker for already-reported potholes, a photo privacy note, keyboard pin placement, and a "What happens next" timeline on the confirmation screen, which sits close to the excluded status tracking. Times for the follow-up rounds include the model testing its own build and are not comparable with the first-request runs.
 
@@ -32,7 +32,7 @@ Follow-up rounds: the scoped arm held at 3 screens but grew within them, from ab
 
 `python3 count.py` (requires `beautifulsoup4`). Screens are the `<section>` elements carrying a `data-screen` attribute, whatever other classes they have. "Copy kept" is the share of distinct words (three letters or longer) on each screen of the source prototype that also appear on the same-named screen of the re-render, pooled across all screens. Generation time is the wall-clock duration of each generation session, including the model writing the file.
 
-`python3 render_thumbs.py` (requires `playwright` and `Pillow`) renders the screen thumbnails in `thumbs/` from the prototype files, without modifying them. For F, it presses the prototype's own fidelity buttons.
+`python3 render_thumbs.py` (requires `playwright` and `Pillow`) renders the screen thumbnails in `thumbs/` from the prototype files, without modifying them. For F, it presses the prototype's own fidelity buttons. U3 fills several screens only when its own router opens them, so `render_u3_signed_in.py` re-renders U3 by signing in with the demo account the prototype provides and navigating to each screen; the five draft-flow screens it will not open directly keep the `render_thumbs.py` rendering. `python3 make_figures.py` composes the article figures in `figures/` from the thumbnails.
 
 ## Limits
 

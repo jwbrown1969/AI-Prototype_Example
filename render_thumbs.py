@@ -50,11 +50,13 @@ SHOW = """
     }
   }
   window.scrollTo(0, 0);
+  window.dispatchEvent(new Event('resize'));
 }
 """
 
 
 ONLY = None  # set to a list of run names to render a subset
+SETTLE_MS = 400
 
 
 async def main():
@@ -74,7 +76,7 @@ async def main():
                     await page.wait_for_timeout(200)
                 for i, name in enumerate(names, 1):
                     await page.evaluate(SHOW, name)
-                    await page.wait_for_timeout(120)
+                    await page.wait_for_timeout(SETTLE_MS)
                     tag = f"{run}_{fid}" if fid else run
                     path = OUT / f"{tag}_{i:02d}_{name}.png"
                     if run in ELEMENT_SHOTS:
